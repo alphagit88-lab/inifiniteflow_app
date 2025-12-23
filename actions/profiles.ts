@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase/supabaseClient'
 
 /**
  * Supabase URL and Service Role Key (Admin Access)
@@ -22,6 +23,34 @@ export interface Profile {
   subscription_status: string
   subscription_plan?: number | null
   created_at: string
+}
+
+/**
+ * Full profile interface matching the database schema
+ */
+export interface FullProfile {
+  user_id: string
+  email: string
+  first_name: string
+  last_name: string
+  user_type: string
+  nickname: string
+  profile_picture: string | null
+  date_of_birth: string
+  gender: string
+  subscription_plan: number
+  subscription_status: string
+  subscription_start_date: string | null
+  subscription_end_date: string | null
+  height: number
+  height_unit: string
+  weight: number
+  weight_unit: string
+  activity_level: string
+  dietary_preference: string
+  allergies: string[]
+  created_at: string
+  updated_at: string
 }
 
 /**
@@ -62,6 +91,89 @@ export async function getUserProfiles(): Promise<{
       success: false,
       data: null,
       error: err instanceof Error ? err.message : 'An unknown runtime error occurred while fetching profiles.',
+    }
+  }
+}
+
+/**
+ * Gets the current user's profile
+ */
+export async function getCurrentUserProfile(): Promise<{
+  success: boolean
+  data: FullProfile | null
+  error: string | null
+}> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, data: null, error: 'User not authenticated' }
+    }
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', user.id)
+      .single()
+
+    if (error) {
+      console.error('[getCurrentUserProfile] Error fetching profile:', error)
+      return { success: false, data: null, error: 'Failed to fetch profile: ' + error.message }
+    }
+
+    return { success: true, data: data as FullProfile, error: null }
+  } catch (err) {
+    console.error('[getCurrentUserProfile] Unexpected error:', err)
+    return {
+      success: false,
+      data: null,
+      error: err instanceof Error ? err.message : 'An unknown runtime error occurred.',
+    }
+  }
+}
+
+/**
+ * Updates the current user's profile
+ */
+export async function updateUserProfile(updates: Partial<FullProfile>): Promise<{
+  success: boolean
+  data: FullProfile | null
+  error: string | null
+}> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, data: null, error: 'User not authenticated' }
+    }
+
+    // Remove fields that shouldn't be updated directly
+    const { user_id, email, user_type, created_at, subscription_plan, subscription_status, subscription_start_date, subscription_end_date, ...allowedUpdates } = updates
+
+    const updateData = {
+      ...allowedUpdates,
+      updated_at: new Date().toISOString(),
+    }
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(updateData)
+      .eq('user_id', user.id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('[updateUserProfile] Error updating profile:', error)
+      return { success: false, data: null, error: 'Failed to update profile: ' + error.message }
+    }
+
+    return { success: true, data: data as FullProfile, error: null }
+  } catch (err) {
+    console.error('[updateUserProfile] Unexpected error:', err)
+    return {
+      success: false,
+      data: null,
+      error: err instanceof Error ? err.message : 'An unknown runtime error occurred.',
     }
   }
 }
