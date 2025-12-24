@@ -1,56 +1,57 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { signUpUser, type SignupData } from '@/actions/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import Link from 'next/link'
-import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
+import { supabase } from '@/lib/supabase/supabaseClient'
 
 export default function SignUpPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [acceptedTerms, setAcceptedTerms] = useState(false)
-  const [currentStep, setCurrentStep] = useState(1)
-  const [formData, setFormData] = useState<SignupData>({
-    email: '',
-    password: '',
-    first_name: '',
-    last_name: '',
-    nickname: '',
-    date_of_birth: '',
-    gender: '',
-    height: 0,
-    height_unit: 'cm',
-    weight: 0,
-    weight_unit: 'kg',
-    activity_level: '',
-    dietary_preference: '',
-    allergies: [],
-  })
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [displayName, setDisplayName] = useState('')
+  const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null)
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false)
 
-  const handleStep1Submit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!formData.email || !formData.password || !formData.first_name || !formData.last_name) {
-      setError('Please fill in all required fields')
+  // Check email availability with debounce
+  useEffect(() => {
+    if (!email) {
+      setEmailAvailable(null)
       return
     }
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters')
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      setEmailAvailable(null)
       return
     }
-    if (!acceptedTerms) {
-      setError('Please accept the Privacy Policy and Terms of Use')
-      return
-    }
-    setError(null)
-    setCurrentStep(2)
-  }
+
+    const timeoutId = setTimeout(async () => {
+      setIsCheckingEmail(true)
+      try {
+        const response = await fetch(`/api/auth/check-email?email=${encodeURIComponent(email)}`)
+        const data = await response.json()
+        setEmailAvailable(data.is_available)
+      } catch (err) {
+        console.error('Error checking email:', err)
+        setEmailAvailable(null)
+      } finally {
+        setIsCheckingEmail(false)
+      }
+    }, 500) // 500ms debounce
+
+    return () => clearTimeout(timeoutId)
+  }, [email])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -58,370 +59,299 @@ export default function SignUpPage() {
     setError(null)
 
     // Validation
-    if (!formData.nickname || !formData.date_of_birth || !formData.gender) {
+    if (!email || !password || !confirmPassword || !displayName) {
       setError('Please fill in all required fields')
       setIsLoading(false)
       return
     }
 
-    if (formData.height <= 0 || formData.weight <= 0) {
-      setError('Height and weight must be greater than 0')
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
       setIsLoading(false)
       return
     }
 
-    if (!formData.activity_level || !formData.dietary_preference) {
-      setError('Activity level and dietary preference are required')
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long')
+      setIsLoading(false)
+      return
+    }
+
+    if (!acceptedTerms) {
+      setError('Please accept the Privacy Policy and Terms of Use')
+      setIsLoading(false)
+      return
+    }
+
+    if (emailAvailable === false) {
+      setError('This email is already registered')
       setIsLoading(false)
       return
     }
 
     try {
-      const result = await signUpUser(formData)
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          display_name: displayName.trim(),
+          provider: 'email',
+          provider_type: 'local',
+        }),
+      })
 
-      if (result.success) {
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || 'Failed to create account')
+        setIsLoading(false)
+        return
+      }
+
+      // Sign in the user after successful registration
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      })
+
+      if (signInError) {
+        // Account created but sign-in failed, redirect to login
         router.push('/users/login?signup=success')
-      } else {
-        setError(result.error || 'Failed to create account')
+        return
+      }
+
+      // Success - redirect to dashboard or next step
+      router.push('/users/dashboard')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
+      setIsLoading(false)
+    }
+  }
+
+  const handleGoogleSignUp = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/users/dashboard`,
+        },
+      })
+
+      if (error) {
+        setError(error.message || 'Failed to sign up with Google')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
-    } finally {
-      setIsLoading(false)
     }
   }
 
   return (
     <div className="min-h-screen bg-[#F5F5F0] flex flex-col">
-      {/* Header with back button */}
-      <div className="px-4 pt-12 pb-4">
-        <button
-          onClick={() => router.back()}
-          className="text-[#FF6B35] mb-4 flex items-center gap-2"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="text-center mb-6">
-          <p className="text-sm text-[#FF6B35] mb-1">Step {currentStep}</p>
-          <h1 className="text-2xl md:text-3xl font-bold text-[#FF6B35]">
-            Create your Account
-          </h1>
-          {currentStep === 1 && formData.email && (
-            <p className="text-sm text-[#FF6B35] mt-2">{formData.email}</p>
-          )}
-        </div>
-      </div>
-
-      {/* Error Message */}
-      {error && (
-        <div className="mx-4 mb-4 p-3 rounded-lg bg-red-50 text-red-600 text-sm border border-red-200">
-          {error}
-        </div>
-      )}
-
-      {/* Form */}
-      <div className="flex-1 px-4 pb-8">
-        {currentStep === 1 ? (
-          <form onSubmit={handleStep1Submit} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="first_name" className="text-[#333] text-sm font-medium">
-                First Name
-              </Label>
-              <Input
-                id="first_name"
-                type="text"
-                placeholder="Enter your first name"
-                value={formData.first_name}
-                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                required
-                disabled={isLoading}
-                className="bg-white border-gray-300 rounded-lg h-12 text-[#333] placeholder:text-gray-400 focus:border-[#FF6B35] focus:ring-[#FF6B35]"
-              />
+      {/* Background Image with Overlay */}
+      <div className="relative flex-1 flex items-center justify-center px-4 py-12">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#F5F5F0] via-[#F5F5F0]/95 to-[#F5F5F0] z-0" />
+        <div className="relative z-10 w-full max-w-md">
+          {/* Form Container */}
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-8 space-y-6">
+            <div className="text-center mb-6">
+              <h1 className="text-3xl font-bold text-[#333] mb-2">Sign Up</h1>
+              <p className="text-sm text-gray-600">Create your account to get started</p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="last_name" className="text-[#333] text-sm font-medium">
-                Last Name
-              </Label>
-              <Input
-                id="last_name"
-                type="text"
-                placeholder="Enter your last name"
-                value={formData.last_name}
-                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                required
-                disabled={isLoading}
-                className="bg-white border-gray-300 rounded-lg h-12 text-[#333] placeholder:text-gray-400 focus:border-[#FF6B35] focus:ring-[#FF6B35]"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-[#333] text-sm font-medium">
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-                disabled={isLoading}
-                className="bg-white border-gray-300 rounded-lg h-12 text-[#333] placeholder:text-gray-400 focus:border-[#FF6B35] focus:ring-[#FF6B35]"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-[#333] text-sm font-medium">
-                Password
-              </Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-                  disabled={isLoading}
-                  minLength={6}
-                  className="bg-white border-gray-300 rounded-lg h-12 text-[#333] placeholder:text-gray-400 focus:border-[#FF6B35] focus:ring-[#FF6B35] pr-12"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
+            {/* Error Message */}
+            {error && (
+              <div className="p-3 rounded-lg bg-red-50 text-red-600 text-sm border border-red-200">
+                {error}
               </div>
-            </div>
+            )}
 
-            <div className="flex items-start gap-2 pt-2">
-              <input
-                type="checkbox"
-                id="terms"
-                checked={acceptedTerms}
-                onChange={(e) => setAcceptedTerms(e.target.checked)}
-                className="mt-1 w-4 h-4 text-[#4A90E2] border-gray-300 rounded focus:ring-[#4A90E2]"
-              />
-              <Label htmlFor="terms" className="text-xs text-[#666] leading-relaxed cursor-pointer">
-                By continuing you accept our{' '}
-                <Link href="#" className="text-[#4A90E2] underline">Privacy Policy</Link>
-                {' '}and{' '}
-                <Link href="#" className="text-[#4A90E2] underline">Term of Use</Link>
-              </Label>
-            </div>
-
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="w-full h-12 bg-[#4A90E2] hover:bg-[#3A7BC8] text-white font-medium rounded-lg mt-6"
-            >
-              Next
-            </Button>
-          </form>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="nickname" className="text-[#333] text-sm font-medium">
-                Nickname *
-              </Label>
-              <Input
-                id="nickname"
-                type="text"
-                placeholder="Enter your nickname"
-                value={formData.nickname}
-                onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
-                required
-                disabled={isLoading}
-                className="bg-white border-gray-300 rounded-lg h-12 text-[#333] placeholder:text-gray-400 focus:border-[#FF6B35] focus:ring-[#FF6B35]"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="date_of_birth" className="text-[#333] text-sm font-medium">
-                  Date of Birth *
-                </Label>
-                <Input
-                  id="date_of_birth"
-                  type="date"
-                  value={formData.date_of_birth}
-                  onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
-                  required
-                  disabled={isLoading}
-                  max={new Date().toISOString().split('T')[0]}
-                  className="bg-white border-gray-300 rounded-lg h-12 text-[#333] focus:border-[#FF6B35] focus:ring-[#FF6B35]"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="gender" className="text-[#333] text-sm font-medium">
-                  Gender *
-                </Label>
-                <Select
-                  value={formData.gender}
-                  onValueChange={(value) => setFormData({ ...formData, gender: value })}
-                  disabled={isLoading}
-                  required
-                >
-                  <SelectTrigger id="gender" className="bg-white border-gray-300 rounded-lg h-12 text-[#333] focus:border-[#FF6B35]">
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Male">Male</SelectItem>
-                    <SelectItem value="Female">Female</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                    <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="height" className="text-[#333] text-sm font-medium">
-                  Height *
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="height"
-                    type="number"
-                    placeholder="170"
-                    value={formData.height || ''}
-                    onChange={(e) => setFormData({ ...formData, height: parseFloat(e.target.value) || 0 })}
-                    required
-                    disabled={isLoading}
-                    min="0"
-                    step="0.1"
-                    className="flex-1 bg-white border-gray-300 rounded-lg h-12 text-[#333] focus:border-[#FF6B35] focus:ring-[#FF6B35]"
-                  />
-                  <Select
-                    value={formData.height_unit}
-                    onValueChange={(value) => setFormData({ ...formData, height_unit: value })}
-                    disabled={isLoading}
-                  >
-                    <SelectTrigger className="w-20 bg-white border-gray-300 rounded-lg h-12 text-[#333]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cm">cm</SelectItem>
-                      <SelectItem value="ft">ft</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="weight" className="text-[#333] text-sm font-medium">
-                  Weight *
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="weight"
-                    type="number"
-                    placeholder="70"
-                    value={formData.weight || ''}
-                    onChange={(e) => setFormData({ ...formData, weight: parseFloat(e.target.value) || 0 })}
-                    required
-                    disabled={isLoading}
-                    min="0"
-                    step="0.1"
-                    className="flex-1 bg-white border-gray-300 rounded-lg h-12 text-[#333] focus:border-[#FF6B35] focus:ring-[#FF6B35]"
-                  />
-                  <Select
-                    value={formData.weight_unit}
-                    onValueChange={(value) => setFormData({ ...formData, weight_unit: value })}
-                    disabled={isLoading}
-                  >
-                    <SelectTrigger className="w-20 bg-white border-gray-300 rounded-lg h-12 text-[#333]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="kg">kg</SelectItem>
-                      <SelectItem value="lb">lb</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="activity_level" className="text-[#333] text-sm font-medium">
-                  Activity Level *
-                </Label>
-                <Select
-                  value={formData.activity_level}
-                  onValueChange={(value) => setFormData({ ...formData, activity_level: value })}
-                  disabled={isLoading}
-                  required
-                >
-                  <SelectTrigger id="activity_level" className="bg-white border-gray-300 rounded-lg h-12 text-[#333] focus:border-[#FF6B35]">
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Sedentary">Sedentary</SelectItem>
-                    <SelectItem value="Lightly Active">Lightly Active</SelectItem>
-                    <SelectItem value="Moderately Active">Moderately Active</SelectItem>
-                    <SelectItem value="Very Active">Very Active</SelectItem>
-                    <SelectItem value="Extremely Active">Extremely Active</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="dietary_preference" className="text-[#333] text-sm font-medium">
-                  Dietary Preference *
-                </Label>
-                <Select
-                  value={formData.dietary_preference}
-                  onValueChange={(value) => setFormData({ ...formData, dietary_preference: value })}
-                  disabled={isLoading}
-                  required
-                >
-                  <SelectTrigger id="dietary_preference" className="bg-white border-gray-300 rounded-lg h-12 text-[#333] focus:border-[#FF6B35]">
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Omnivore">Omnivore</SelectItem>
-                    <SelectItem value="Vegetarian">Vegetarian</SelectItem>
-                    <SelectItem value="Vegan">Vegan</SelectItem>
-                    <SelectItem value="Pescatarian">Pescatarian</SelectItem>
-                    <SelectItem value="Keto">Keto</SelectItem>
-                    <SelectItem value="Paleo">Paleo</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="flex gap-4 pt-4">
-              <Button
-                type="button"
-                onClick={() => setCurrentStep(1)}
-                variant="outline"
-                className="flex-1 h-12 border-gray-300 text-[#333] rounded-lg"
+            {/* Email Availability Indicator */}
+            {email && emailAvailable !== null && !isCheckingEmail && (
+              <div
+                className={`p-2 rounded-lg text-sm ${
+                  emailAvailable
+                    ? 'bg-green-50 text-green-600 border border-green-200'
+                    : 'bg-red-50 text-red-600 border border-red-200'
+                }`}
               >
-                Back
-              </Button>
+                {emailAvailable ? '✓ Email is available' : '✗ Email is already registered'}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="display_name" className="text-[#333] text-sm font-medium">
+                  Display Name
+                </Label>
+                <Input
+                  id="display_name"
+                  type="text"
+                  placeholder="Enter your display name"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  className="bg-white border-gray-300 rounded-lg h-12 text-[#333] placeholder:text-gray-400 focus:border-[#4A90E2] focus:ring-[#4A90E2]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-[#333] text-sm font-medium">
+                  Email
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  className="bg-white border-gray-300 rounded-lg h-12 text-[#333] placeholder:text-gray-400 focus:border-[#4A90E2] focus:ring-[#4A90E2]"
+                />
+                {isCheckingEmail && (
+                  <p className="text-xs text-gray-500">Checking email availability...</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-[#333] text-sm font-medium">
+                  Password
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    minLength={6}
+                    className="bg-white border-gray-300 rounded-lg h-12 text-[#333] placeholder:text-gray-400 focus:border-[#4A90E2] focus:ring-[#4A90E2] pr-12"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirm_password" className="text-[#333] text-sm font-medium">
+                  Confirm Password
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="confirm_password"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    placeholder="Confirm your password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    minLength={6}
+                    className="bg-white border-gray-300 rounded-lg h-12 text-[#333] placeholder:text-gray-400 focus:border-[#4A90E2] focus:ring-[#4A90E2] pr-12"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2 pt-2">
+                <input
+                  type="checkbox"
+                  id="terms"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="mt-1 w-4 h-4 text-[#4A90E2] border-gray-300 rounded focus:ring-[#4A90E2]"
+                />
+                <Label htmlFor="terms" className="text-xs text-[#666] leading-relaxed cursor-pointer">
+                  By continuing you accept our{' '}
+                  <Link href="#" className="text-[#4A90E2] underline">
+                    Privacy Policy
+                  </Link>{' '}
+                  and{' '}
+                  <Link href="#" className="text-[#4A90E2] underline">
+                    Terms of Use
+                  </Link>
+                </Label>
+              </div>
+
               <Button
                 type="submit"
-                disabled={isLoading}
-                className="flex-1 h-12 bg-[#4A90E2] hover:bg-[#3A7BC8] text-white font-medium rounded-lg"
+                disabled={isLoading || emailAvailable === false}
+                className="w-full h-12 bg-[#4A90E2] hover:bg-[#3A7BC8] text-white font-medium rounded-lg mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? 'Creating...' : 'Create Account'}
+                {isLoading ? 'Creating Account...' : 'Sign Up'}
               </Button>
-            </div>
-          </form>
-        )}
+            </form>
 
-        {/* Footer */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-[#666]">
-            Already have an account?{' '}
-            <Link href="/users/login" className="text-[#4A90E2] font-medium underline">
-              Sign in
-            </Link>
-          </p>
+            {/* Divider */}
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white/90 text-gray-500">Or</span>
+              </div>
+            </div>
+
+            {/* Google Sign Up Button */}
+            <Button
+              type="button"
+              onClick={handleGoogleSignUp}
+              disabled={isLoading}
+              variant="outline"
+              className="w-full h-12 border-gray-300 text-[#333] rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                />
+              </svg>
+              Sign up with Google
+            </Button>
+
+            {/* Footer */}
+            <div className="mt-6 text-center">
+              <p className="text-sm text-[#666]">
+                Already have an account?{' '}
+                <Link href="/users/login" className="text-[#4A90E2] font-medium underline">
+                  Sign in
+                </Link>
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
