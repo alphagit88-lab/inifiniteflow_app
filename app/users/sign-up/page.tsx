@@ -153,7 +153,7 @@ export default function SignUpPage() {
     <div className="min-h-screen bg-[#F5F5F0] flex flex-col">
       {/* Background Image with Overlay */}
       <div className="relative flex-1 flex items-center justify-center px-4 py-12">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#F5F5F0] via-[#F5F5F0]/95 to-[#F5F5F0] z-0" />
+        <div className="absolute inset-0 bg-linear-to-b from-[#F5F5F0] via-[#F5F5F0]/95 to-[#F5F5F0] z-0" />
         <div className="relative z-10 w-full max-w-md">
           {/* Form Container */}
           <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-8 space-y-6">
