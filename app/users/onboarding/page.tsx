@@ -49,7 +49,7 @@ export default function OnboardingPage() {
               'url(https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1200&q=80)',
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/30 to-black/70" />
+        <div className="absolute inset-0 bg-linear-to-b from-black/10 via-black/30 to-black/70" />
         <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6">
           <InfinityLogo className="w-16 h-16 text-white mb-6" />
           <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 tracking-wide text-center">
@@ -75,7 +75,7 @@ export default function OnboardingPage() {
               'url(https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1200&q=80)',
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/30 to-black/70" />
+        <div className="absolute inset-0 bg-linear-to-b from-black/10 via-black/30 to-black/70" />
 
         <div className="relative z-10 h-full flex flex-col justify-between px-6 pt-10 pb-6">
           {/* Top right icons placeholder */}
@@ -255,19 +255,8 @@ function StepCard({
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: `url(${imageUrl})` }}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10" />
-      <div className="relative z-10 p-4 flex flex-col justify-between h-40">
-        <div>
-          <p className="text-xs text-white/80 mb-1">{subtitle}</p>
-          <h3 className="text-base font-semibold">{title}</h3>
-        </div>
-        <div className="flex items-center justify-between text-xs mt-2">
-          <span className="px-2 py-0.5 rounded-full bg-white/15 border border-white/30">
-            {minutes} min
-          </span>
-          <span className="text-white/80">3 videos</span>
-        </div>
-      </div>
+      <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/40 to-black/10" />
+      
     </div>
   )
 }

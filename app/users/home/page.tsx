@@ -221,7 +221,7 @@ function ClassHeroCard() {
             'url(https://images.unsplash.com/photo-1554344058-8d1d1dbc5960?w=800&q=80)',
         }}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10" />
+      <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/40 to-black/10" />
       <div className="relative z-10 p-4 flex flex-col justify-between h-40">
         <div>
           <p className="text-[10px] uppercase tracking-[0.2em] text-white/70 mb-1">
@@ -276,7 +276,7 @@ function WorkoutPreview() {
             'url(https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80)',
         }}
       />
-      <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-black/10" />
+      <div className="absolute inset-0 bg-linear-to-r from-black/80 via-black/40 to-black/10" />
       <div className="relative z-10 p-4 flex items-center justify-between gap-4">
         <div>
           <p className="text-[10px] uppercase tracking-[0.2em] text-white/70 mb-1">
@@ -303,7 +303,7 @@ function TrainerHeroCard() {
             'url(https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800&q=80)',
         }}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
+      <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/30 to-black/10" />
       <div className="relative z-10 p-4 flex flex-col justify-end h-44">
         <p className="text-[10px] uppercase tracking-[0.2em] text-white/70 mb-1">
           Meet your Trainer
