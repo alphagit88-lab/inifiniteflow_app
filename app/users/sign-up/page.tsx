@@ -124,8 +124,8 @@ export default function SignUpPage() {
         return
       }
 
-      // Success - redirect to dashboard or next step
-      router.push('/users/dashboard')
+      // Success - redirect new users through onboarding flow first
+      router.push('/users/onboarding')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
       setIsLoading(false)
