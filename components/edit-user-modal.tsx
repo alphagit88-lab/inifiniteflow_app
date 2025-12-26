@@ -19,7 +19,11 @@ interface EditUserModalProps {
 }
 
 export function EditUserModal({ user, onClose, onUserUpdated }: EditUserModalProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    nickname: string
+    email: string
+    subscriptionStatus: typeof SUBSCRIPTION_OPTIONS[number]
+  }>({
     nickname: '',
     email: '',
     subscriptionStatus: SUBSCRIPTION_OPTIONS[0],
