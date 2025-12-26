@@ -2,13 +2,13 @@ import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase/supabaseClient'
 
 interface RouteContext {
-  params: {
+  params: Promise<{
     userId: string
-  }
+  }>
 }
 
-export async function DELETE(_: Request, { params }: RouteContext) {
-  const { userId } = params
+export async function DELETE(_: Request, context: RouteContext) {
+  const { userId } = await context.params
 
   if (!userId) {
     return NextResponse.json({ error: 'User identifier is required' }, { status: 400 })
@@ -23,8 +23,8 @@ export async function DELETE(_: Request, { params }: RouteContext) {
   return NextResponse.json({ success: true })
 }
 
-export async function PATCH(request: Request, { params }: RouteContext) {
-  const { userId } = params
+export async function PATCH(request: Request, context: RouteContext) {
+  const { userId } = await context.params
 
   if (!userId) {
     return NextResponse.json({ error: 'User identifier is required' }, { status: 400 })
