@@ -4,15 +4,32 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { PlayCircle, Dumbbell, Utensils, User2 } from 'lucide-react'
+import { getCurrentUser } from '@/lib/supabase/auth'
 
 type ScreenStep = 0 | 1 | 2
 
 export default function OnboardingPage() {
   const router = useRouter()
   const [step, setStep] = useState<ScreenStep>(0)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+  // Check authentication on mount
+  useEffect(() => {
+    async function checkAuth() {
+      const user = await getCurrentUser()
+      if (!user) {
+        router.push('/users/login')
+        return
+      }
+      setIsAuthenticated(true)
+    }
+    checkAuth()
+  }, [router])
 
   // Simple timed transitions for the first two loading screens
   useEffect(() => {
+    if (!isAuthenticated) return
+    
     if (step === 0) {
       const timer = setTimeout(() => setStep(1), 1300)
       return () => clearTimeout(timer)
@@ -21,10 +38,18 @@ export default function OnboardingPage() {
       const timer = setTimeout(() => setStep(2), 1300)
       return () => clearTimeout(timer)
     }
-  }, [step])
+  }, [step, isAuthenticated])
 
   const handleGetStarted = () => {
-    router.push('/users/dashboard')
+    router.push('/users/home')
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#4A90E2]">
+        <p className="text-white">Loading...</p>
+      </div>
+    )
   }
 
   // Splash 1 – solid brand color with logo
