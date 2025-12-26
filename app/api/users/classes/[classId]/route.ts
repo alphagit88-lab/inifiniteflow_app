@@ -16,7 +16,7 @@ export async function GET(
 
     const { data, error } = await supabaseAdmin
       .from('classes')
-      .select('*, instructors(*)')
+      .select('*')
       .eq('class_id', classId)
       .single()
 

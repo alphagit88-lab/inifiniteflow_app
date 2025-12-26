@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
     let query = supabaseAdmin
       .from('classes')
-      .select('*, instructors(*)', { count: 'exact' })
+      .select('*', { count: 'exact' })
       .eq('is_published', true)
       .order('created_at', { ascending: false })
 
