@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, usePathname } from 'next/navigation'
-import { Home, Dumbbell, Utensils, User2 } from 'lucide-react'
+import { Home, Dumbbell, Utensils, User2, BarChart2 } from 'lucide-react'
 
 interface NavItemProps {
   label: string
@@ -47,7 +47,7 @@ export function UserBottomNav() {
           active={isActive('/users/home')}
         />
         <NavItem 
-          label="Workout" 
+          label="Classes" 
           icon={<Dumbbell className="w-5 h-5" />} 
           href="/users/workout"
           active={isActive('/users/workout')}
@@ -57,6 +57,12 @@ export function UserBottomNav() {
           icon={<Utensils className="w-5 h-5" />} 
           href="/users/meals"
           active={isActive('/users/meals')}
+        />
+        <NavItem 
+          label="Progress" 
+          icon={<BarChart2 className="w-5 h-5" />} 
+          href="/users/progress"
+          active={isActive('/users/progress')}
         />
         <NavItem 
           label="Profile" 
