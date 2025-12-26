@@ -10,23 +10,24 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const uid = searchParams.get('uid')
+    const userId = searchParams.get('userId') || searchParams.get('uid')
 
-    if (!uid) {
+    if (!userId) {
       return NextResponse.json(
         { error: 'User ID is required' },
         { status: 400 }
       )
     }
 
-    // Get user data from users table
+    // Get user data from profiles table
     const { data: userData, error: userError } = await supabaseAdmin
-      .from('users')
+      .from('profiles')
       .select('*')
-      .eq('uid', uid)
+      .eq('user_id', userId)
       .single()
 
     if (userError) {
+      console.error('Profile fetch error:', userError)
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
@@ -50,9 +51,10 @@ export async function GET(request: Request) {
 export async function PUT(request: Request) {
   try {
     const payload = await request.json()
-    const { uid, ...updates } = payload
+    const { userId, uid, ...updates } = payload
+    const userIdValue = userId || uid
 
-    if (!uid) {
+    if (!userIdValue) {
       return NextResponse.json(
         { error: 'User ID is required' },
         { status: 400 }
@@ -61,11 +63,11 @@ export async function PUT(request: Request) {
 
     // Only allow updating specific fields
     const allowedFields = [
-      'display_name',
-      'phone',
+      'email',
       'first_name',
       'last_name',
       'nickname',
+      'profile_picture',
       'date_of_birth',
       'gender',
       'height',
@@ -74,13 +76,37 @@ export async function PUT(request: Request) {
       'weight_unit',
       'activity_level',
       'dietary_preference',
-      'allergies'
+      'allergies',
+      'onboarding_skip_step',
+      'onboarding_completed_step'
     ]
+
+    // Fields that are PostgreSQL arrays
+    const arrayFields = ['allergies', 'onboarding_skip_step', 'onboarding_completed_step']
 
     const updateData: Record<string, any> = {}
     Object.keys(updates).forEach(key => {
       if (allowedFields.includes(key)) {
-        updateData[key] = updates[key]
+        let value = updates[key]
+        
+        // Handle array fields - ensure they are proper arrays
+        if (arrayFields.includes(key)) {
+          if (typeof value === 'string') {
+            // If it's a JSON string, parse it
+            try {
+              value = JSON.parse(value)
+            } catch {
+              // If parsing fails, wrap single value in array
+              value = value ? [value] : []
+            }
+          }
+          // Ensure it's an array
+          if (!Array.isArray(value)) {
+            value = value ? [value] : []
+          }
+        }
+        
+        updateData[key] = value
       }
     })
 
@@ -91,11 +117,14 @@ export async function PUT(request: Request) {
       )
     }
 
-    // Update user record
+    // Add updated_at timestamp
+    updateData.updated_at = new Date().toISOString()
+
+    // Update profile record
     const { data: updatedUser, error: updateError } = await supabaseAdmin
-      .from('users')
+      .from('profiles')
       .update(updateData)
-      .eq('uid', uid)
+      .eq('user_id', userIdValue)
       .select()
       .single()
 
