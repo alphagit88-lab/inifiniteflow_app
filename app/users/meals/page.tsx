@@ -1,16 +1,54 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Filter, Clock, ChevronRight } from 'lucide-react'
+import { Search, Filter, Clock, ChevronRight, Loader2 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { UserBottomNav } from '@/components/user-bottom-nav'
-import { mockMeals, groupMealsByCategory, type Meal } from '@/lib/types/meals'
+import { 
+  mockMeals, 
+  groupMealsByCategory, 
+  fetchMeals, 
+  recipeToMeal,
+  type Meal 
+} from '@/lib/types/meals'
 
 export default function MealsPage() {
   const router = useRouter()
-  const [meals] = useState<Meal[]>(mockMeals)
+  const [meals, setMeals] = useState<Meal[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    loadMeals()
+  }, [])
+
+  const loadMeals = async () => {
+    setIsLoading(true)
+    setError(null)
+    
+    try {
+      const response = await fetchMeals({ limit: 50 })
+      
+      if (response.success && response.data.length > 0) {
+        // Transform API recipes to Meal format
+        const transformedMeals = response.data.map(recipeToMeal)
+        setMeals(transformedMeals)
+      } else {
+        // Fallback to mock data if API returns empty or fails
+        console.log('Using mock data as fallback')
+        setMeals(mockMeals)
+      }
+    } catch (err) {
+      console.error('Error loading meals:', err)
+      setError('Failed to load meals')
+      // Fallback to mock data on error
+      setMeals(mockMeals)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const groupedMeals = useMemo(() => {
     const filtered = searchQuery
@@ -22,13 +60,39 @@ export default function MealsPage() {
     return groupMealsByCategory(filtered)
   }, [meals, searchQuery])
 
-  const categories = ['Breakfast', 'Dinner', 'Snacks']
+  // Get unique categories from data, with preferred order
+  const preferredOrder = ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Other']
+  const categories = useMemo(() => {
+    const uniqueCategories = [...new Set(meals.map(m => m.category))]
+    return preferredOrder.filter(cat => uniqueCategories.includes(cat))
+      .concat(uniqueCategories.filter(cat => !preferredOrder.includes(cat)))
+  }, [meals])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F0] flex flex-col">
+        <header className="px-4 pt-8 pb-4">
+          <h1 className="text-3xl font-bold text-[#333]">Meals</h1>
+        </header>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-[#4A90E2]" />
+            <p className="text-sm text-[#666]">Loading meals...</p>
+          </div>
+        </div>
+        <UserBottomNav />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#F5F5F0] flex flex-col">
       {/* Header */}
       <header className="px-4 pt-8 pb-4">
         <h1 className="text-3xl font-bold text-[#333]">Meals</h1>
+        {error && (
+          <p className="text-xs text-amber-600 mt-1">Using cached data</p>
+        )}
       </header>
 
       {/* Search & Filter */}

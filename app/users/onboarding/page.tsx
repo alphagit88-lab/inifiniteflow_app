@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { PlayCircle, Dumbbell, Utensils, User2 } from 'lucide-react'
+import { PlayCircle, Dumbbell, Utensils, User2, BarChart2, Home } from 'lucide-react'
 import { getCurrentUser } from '@/lib/supabase/auth'
 
 type ScreenStep = 0 | 1 | 2
@@ -200,13 +200,14 @@ export default function OnboardingPage() {
         </div>
       </div>
 
-      {/* Bottom navigation mock (non-functional, for visual onboarding only) */}
+      {/* Bottom navigation - functional */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-2">
         <div className="flex justify-between items-center max-w-md mx-auto text-xs">
-          <NavItem label="Home" icon={<PlayCircle className="w-5 h-5" />} active />
-          <NavItem label="Workout" icon={<Dumbbell className="w-5 h-5" />} />
-          <NavItem label="Meals" icon={<Utensils className="w-5 h-5" />} />
-          <NavItem label="Profile" icon={<User2 className="w-5 h-5" />} />
+          <NavItem label="Home" icon={<Home className="w-5 h-5" />} href="/users/home" active />
+          <NavItem label="Classes" icon={<Dumbbell className="w-5 h-5" />} href="/users/workout" />
+          <NavItem label="Meals" icon={<Utensils className="w-5 h-5" />} href="/users/meals" />
+          <NavItem label="Progress" icon={<BarChart2 className="w-5 h-5" />} href="/users/progress" />
+          <NavItem label="Profile" icon={<User2 className="w-5 h-5" />} href="/users/profile" />
         </div>
       </nav>
     </div>
@@ -363,16 +364,22 @@ function TrainerCard({
 function NavItem({
   label,
   icon,
+  href,
   active,
 }: {
   label: string
   icon: React.ReactNode
+  href: string
   active?: boolean
 }) {
+  const router = useRouter()
+  
   return (
     <button
-      className={`flex flex-col items-center gap-0.5 text-[11px] ${
-        active ? 'text-[#4A90E2]' : 'text-gray-500'
+      type="button"
+      onClick={() => router.push(href)}
+      className={`flex flex-col items-center gap-0.5 text-[11px] transition-colors ${
+        active ? 'text-[#4A90E2]' : 'text-gray-500 hover:text-gray-700'
       }`}
     >
       {icon}

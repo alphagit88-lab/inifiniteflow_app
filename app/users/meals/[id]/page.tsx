@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { 
   ChevronLeft, 
@@ -9,21 +9,84 @@ import {
   Bookmark, 
   Clock,
   Users,
-  Flame
+  Flame,
+  Loader2
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { UserBottomNav } from '@/components/user-bottom-nav'
-import { mockMealDetail } from '@/lib/types/meals'
+import { 
+  mockMealDetail, 
+  fetchMealDetail, 
+  recipeToMealDetail,
+  type MealDetail 
+} from '@/lib/types/meals'
 
 export default function MealDetailPage() {
   const router = useRouter()
   const params = useParams()
-  const [meal] = useState(mockMealDetail)
+  const [meal, setMeal] = useState<MealDetail | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'comments' | 'notes'>('comments')
   const [isFavorite, setIsFavorite] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
+
+  useEffect(() => {
+    loadMealDetail()
+  }, [params.id])
+
+  const loadMealDetail = async () => {
+    setIsLoading(true)
+    
+    try {
+      const mealId = params.id as string
+      const response = await fetchMealDetail(mealId)
+      
+      if (response?.success && response.data) {
+        const transformedMeal = recipeToMealDetail(response.data)
+        setMeal(transformedMeal)
+      } else {
+        // Fallback to mock data if API fails
+        console.log('Using mock data as fallback')
+        setMeal(mockMealDetail)
+      }
+    } catch (err) {
+      console.error('Error loading meal detail:', err)
+      // Fallback to mock data on error
+      setMeal(mockMealDetail)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F0] flex flex-col">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-[#4A90E2]" />
+            <p className="text-sm text-[#666]">Loading meal details...</p>
+          </div>
+        </div>
+        <UserBottomNav />
+      </div>
+    )
+  }
+
+  if (!meal) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F0] flex flex-col">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-[#666] mb-4">Meal not found</p>
+            <Button onClick={() => router.back()}>Go Back</Button>
+          </div>
+        </div>
+        <UserBottomNav />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#F5F5F0] flex flex-col">
