@@ -4,14 +4,20 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ocfufnbhqxzwsrxxulup.supabase.co'
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9jZnVmbmJocXh6d3NyeHh1bHVwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzMzMTQ0NywiZXhwIjoyMDc4OTA3NDQ3fQ.B9JSyL6eTg99732hPbUFazai3tLwqGMf2j9zxUx7mfo'
 
+console.log('Supabase config:', { url: supabaseUrl, hasKey: !!supabaseServiceRoleKey })
+
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
 
 export async function GET(request: Request) {
+  console.log('=== Check Email API Called ===')
   try {
+    console.log('Step 1: Parsing request URL')
     const { searchParams } = new URL(request.url)
     const email = searchParams.get('email')
+    console.log('Step 2: Email param:', email)
 
     if (!email) {
+      console.log('Step 3: No email provided')
       return NextResponse.json(
         { error: 'Email parameter is required' },
         { status: 400 }
@@ -19,38 +25,57 @@ export async function GET(request: Request) {
     }
 
     // Validate email format
+    console.log('Step 4: Validating email format')
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
+      console.log('Step 5: Invalid email format')
       return NextResponse.json(
         { is_available: false, error: 'Invalid email format' },
         { status: 400 }
       )
     }
 
-    // Check if email exists
-    const { data: existingUser, error } = await supabaseAdmin
-      .from('users')
+    // Check if email exists in profiles table
+    console.log('Step 6: Querying database for email:', email.trim().toLowerCase())
+    console.log('Supabase client exists:', !!supabaseAdmin)
+    
+    const { data: existingUsers, error } = await supabaseAdmin
+      .from('profiles')
       .select('email')
       .eq('email', email.trim().toLowerCase())
-      .single()
+      .limit(1)
 
-    if (error && error.code !== 'PGRST116') {
-      // PGRST116 is "not found" error, which means email is available
+    console.log('Step 7: Query completed')
+    console.log('Data:', existingUsers)
+    console.log('Error:', error)
+
+    if (error) {
+      console.error('Step 8: Supabase query error:', JSON.stringify(error, null, 2))
       return NextResponse.json(
-        { error: 'Error checking email availability' },
+        { 
+          error: 'Error checking email availability',
+          details: error.message,
+          code: error.code 
+        },
         { status: 500 }
       )
     }
 
+    // Email is available if no users found
+    const isAvailable = !existingUsers || existingUsers.length === 0
+    console.log('Step 9: Returning result, is_available:', isAvailable)
+
     return NextResponse.json({
-      is_available: !existingUser,
+      is_available: isAvailable,
       email: email.trim().toLowerCase(),
     })
   } catch (error) {
-    console.error('Email check error:', error)
+    console.error('CATCH BLOCK - Email check error:', error)
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : 'An unexpected error occurred',
+        stack: error instanceof Error ? error.stack : undefined
       },
       { status: 500 }
     )
