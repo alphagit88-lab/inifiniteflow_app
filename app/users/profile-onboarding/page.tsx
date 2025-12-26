@@ -7,14 +7,17 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
+import { getCurrentUser, updateUserProfile } from '@/lib/supabase/auth'
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7
 
 export default function ProfileOnboardingPage() {
   const router = useRouter()
   const [step, setStep] = useState<Step>(1)
+  const [uid, setUid] = useState<string | null>(null)
+  const [isLoadingUser, setIsLoadingUser] = useState(true)
 
-  // Local-only state – no API integration yet
+  // Profile state
   const [displayName, setDisplayName] = useState('')
   const [gender, setGender] = useState('')
   const [birthDate, setBirthDate] = useState('')
@@ -26,6 +29,28 @@ export default function ProfileOnboardingPage() {
 
   const [isUpdating, setIsUpdating] = useState(false)
   const [isUpdated, setIsUpdated] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Load user on mount
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const userData = await getCurrentUser()
+        if (!userData) {
+          router.push('/users/login')
+          return
+        }
+        setUid(userData.uid)
+        setDisplayName(userData.display_name || '')
+      } catch (error) {
+        console.error('Error loading user:', error)
+        router.push('/users/login')
+      } finally {
+        setIsLoadingUser(false)
+      }
+    }
+    loadUser()
+  }, [router])
 
   const handleToggleAllergy = (value: string) => {
     setAllergies((prev) =>
@@ -33,11 +58,45 @@ export default function ProfileOnboardingPage() {
     )
   }
 
-  const handleNext = () => {
-    // Last real step leads to fake "Updating" screens
+  const handleNext = async () => {
+    // Last real step - save data to API
     if (step === 5) {
+      if (!uid) {
+        setError('User not authenticated')
+        return
+      }
+
       setStep(6)
       setIsUpdating(true)
+      setError(null)
+
+      try {
+        const result = await updateUserProfile(uid, {
+          display_name: displayName,
+          gender,
+          date_of_birth: birthDate || null,
+          height: parseFloat(height) || null,
+          height_unit: 'cm',
+          weight: parseFloat(weight) || null,
+          weight_unit: 'kg',
+          activity_level: activityLevel,
+          dietary_preference: dietaryPreference,
+          allergies: allergies.length > 0 ? JSON.stringify(allergies) : null,
+        })
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to update profile')
+        }
+
+        setIsUpdating(false)
+        setIsUpdated(true)
+        setStep(7)
+      } catch (error) {
+        console.error('Error updating profile:', error)
+        setError(error instanceof Error ? error.message : 'Failed to update profile')
+        setIsUpdating(false)
+        setStep(5)
+      }
       return
     }
     setStep((prev) => (Math.min(prev + 1, 7) as Step))
@@ -51,27 +110,23 @@ export default function ProfileOnboardingPage() {
     setStep((prev) => (Math.max(prev - 1, 1) as Step))
   }
 
-  // Simulate update + success for steps 6 & 7 – purely UI
+  // Redirect after success
   useEffect(() => {
-    if (step === 6) {
+    if (step === 7 && isUpdated) {
       const t = setTimeout(() => {
-        setIsUpdating(false)
-        setIsUpdated(true)
-        setStep(7)
+        router.push('/users/home')
       }, 1500)
       return () => clearTimeout(t)
     }
-  }, [step])
+  }, [step, isUpdated, router])
 
-  // Step 6/7 simple redirect after success (optional)
-  useEffect(() => {
-    if (step === 7) {
-      const t = setTimeout(() => {
-        router.push('/users/onboarding')
-      }, 1500)
-      return () => clearTimeout(t)
-    }
-  }, [step, router])
+  if (isLoadingUser) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FFF7EA]">
+        <p className="text-[#666]">Loading...</p>
+      </div>
+    )
+  }
 
   // Simple progress label
   const stepLabelMap: Record<Step, string> = {

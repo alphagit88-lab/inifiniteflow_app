@@ -1,15 +1,51 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card } from '@/components/ui/card'
 import { PlayCircle, BarChart2, Dumbbell, Utensils, User2 } from 'lucide-react'
+import { getCurrentUser, type User } from '@/lib/supabase/auth'
 
 type HomeMode = 'firstTime' | 'regular'
 
 export default function HomePage() {
+  const router = useRouter()
   const [mode, setMode] = useState<HomeMode>('firstTime')
+  const [user, setUser] = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const userData = await getCurrentUser()
+        if (!userData) {
+          router.push('/users/login')
+          return
+        }
+        setUser(userData)
+      } catch (error) {
+        console.error('Error loading user:', error)
+        router.push('/users/login')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadUser()
+  }, [router])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F0] flex items-center justify-center">
+        <p className="text-[#666]">Loading...</p>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return null
+  }
 
   return (
     <div className="min-h-screen bg-[#F5F5F0] flex flex-col">
@@ -43,7 +79,7 @@ export default function HomePage() {
         </Button>
       </div>
 
-      {mode === 'firstTime' ? <FirstTimeHome /> : <RegularHome />}
+      {mode === 'firstTime' ? <FirstTimeHome user={user} /> : <RegularHome user={user} />}
     </div>
   )
 }
@@ -52,11 +88,16 @@ function HomeShell({
   greeting,
   subtitle,
   showProgress = false,
+  user,
 }: {
   greeting: string
   subtitle: string
   showProgress?: boolean
+  user: User
 }) {
+  const displayName = user.display_name || user.email?.split('@')[0] || 'User'
+  const initials = displayName.substring(0, 2).toUpperCase()
+
   return (
     <>
       {/* Top hero header */}
@@ -66,7 +107,7 @@ function HomeShell({
             <InfinityLogo className="w-7 h-7 text-[#FF6B35]" />
           </div>
           <div>
-            <p className="text-xs text-[#999]">Hello, Clara</p>
+            <p className="text-xs text-[#999]">Hello, {displayName}</p>
             <p className="text-sm font-semibold text-[#333]">{greeting}</p>
           </div>
         </div>
@@ -74,8 +115,7 @@ function HomeShell({
           <button className="text-[#7B5A2F] text-sm">🔍</button>
           <button className="text-[#7B5A2F] text-sm">🔔</button>
           <Avatar className="w-9 h-9 border border-[#F3E5D8] shadow-sm">
-            <AvatarImage src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=200&q=80" />
-            <AvatarFallback>CL</AvatarFallback>
+            <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
         </div>
       </header>
@@ -100,12 +140,13 @@ function HomeShell({
   )
 }
 
-function FirstTimeHome() {
+function FirstTimeHome({ user }: { user: User }) {
   return (
-    <>
+    <div className="flex flex-col flex-1">
       <HomeShell
         greeting="Welcome to your Pilates journey"
         subtitle="First time user gets a welcoming card introducing the program."
+        user={user}
       />
 
       <main className="flex-1 overflow-y-auto px-4 pb-20 space-y-6">
@@ -130,17 +171,18 @@ function FirstTimeHome() {
       </main>
 
       <BottomNav />
-    </>
+    </div>
   )
 }
 
-function RegularHome() {
+function RegularHome({ user }: { user: User }) {
   return (
-    <>
+    <div className="flex flex-col flex-1">
       <HomeShell
         greeting="You are doing great! Keep it up ✨"
         subtitle="Regular user can find their next workout and meal plans ready on the home page."
         showProgress
+        user={user}
       />
 
       <main className="flex-1 overflow-y-auto px-4 pb-20 space-y-6">
@@ -164,7 +206,7 @@ function RegularHome() {
       </main>
 
       <BottomNav />
-    </>
+    </div>
   )
 }
 
@@ -213,7 +255,7 @@ function HorizontalCards({ children }: { children: React.ReactNode }) {
 
 function ClassHeroCard() {
   return (
-    <Card className="w-64 shrink-0 rounded-2xl overflow-hidden border-none shadow-md bg-gray-900 text-white relative">
+    <Card className="w-72 md:w-80 shrink-0 rounded-2xl overflow-hidden border-none shadow-md bg-gray-900 text-white relative hover:shadow-lg transition-shadow">
       <div
         className="absolute inset-0 bg-cover bg-center"
         style={{
@@ -222,7 +264,7 @@ function ClassHeroCard() {
         }}
       />
       <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/40 to-black/10" />
-      <div className="relative z-10 p-4 flex flex-col justify-between h-40">
+      <div className="relative z-10 p-4 md:p-5 flex flex-col justify-between h-44 md:h-48">
         <div>
           <p className="text-[10px] uppercase tracking-[0.2em] text-white/70 mb-1">
             Step by Step
@@ -247,18 +289,18 @@ function ClassHeroCard() {
 
 function SmallClassCard({ title, tag }: { title: string; tag: string }) {
   return (
-    <Card className="w-40 shrink-0 rounded-2xl overflow-hidden border-none shadow-sm bg-white">
+    <Card className="w-48 md:w-56 shrink-0 rounded-2xl overflow-hidden border-none shadow-sm bg-white hover:shadow-md transition-shadow">
       <div
-        className="h-24 bg-cover bg-center"
+        className="h-28 md:h-32 bg-cover bg-center"
         style={{
           backgroundImage:
             'url(https://images.unsplash.com/photo-1552053831-71594a27632d?w=600&q=80)',
         }}
       />
-      <div className="p-3 space-y-1">
+      <div className="p-3 md:p-4 space-y-1.5">
         <p className="text-xs text-[#999]">Step by Step</p>
-        <h3 className="text-sm font-semibold text-[#333] line-clamp-1">{title}</h3>
-        <span className="inline-flex text-[10px] px-2 py-0.5 rounded-full bg-[#E0F2FE] text-[#0369A1]">
+        <h3 className="text-sm md:text-base font-semibold text-[#333] line-clamp-1">{title}</h3>
+        <span className="inline-flex text-[10px] md:text-xs px-2 py-0.5 rounded-full bg-[#E0F2FE] text-[#0369A1]">
           {tag}
         </span>
       </div>
@@ -318,14 +360,14 @@ function TrainerHeroCard() {
 
 function MealCard({ title, subtitle, image }: { title: string; subtitle: string; image: string }) {
   return (
-    <Card className="w-36 shrink-0 rounded-2xl overflow-hidden border-none shadow-sm bg-white">
+    <Card className="w-44 md:w-52 shrink-0 rounded-2xl overflow-hidden border-none shadow-sm bg-white hover:shadow-md transition-shadow">
       <div
-        className="h-24 bg-cover bg-center"
+        className="h-28 md:h-32 bg-cover bg-center"
         style={{ backgroundImage: `url(${image})` }}
       />
-      <div className="p-3 space-y-1">
-        <h3 className="text-sm font-semibold text-[#333] line-clamp-1">{title}</h3>
-        <p className="text-[11px] text-[#777] line-clamp-1">{subtitle}</p>
+      <div className="p-3 md:p-4 space-y-1.5">
+        <h3 className="text-sm md:text-base font-semibold text-[#333] line-clamp-1">{title}</h3>
+        <p className="text-xs text-[#777] line-clamp-1">{subtitle}</p>
       </div>
     </Card>
   )

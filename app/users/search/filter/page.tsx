@@ -1,16 +1,42 @@
 'use client'
 
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { ArrowLeft } from 'lucide-react'
+import { getCurrentUser } from '@/lib/supabase/auth'
 
 export default function SearchFilterPage() {
+  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    async function checkAuth() {
+      const user = await getCurrentUser()
+      if (!user) {
+        router.push('/users/login')
+        return
+      }
+      setIsLoading(false)
+    }
+    checkAuth()
+  }, [router])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F0] flex items-center justify-center">
+        <p className="text-[#666]">Loading...</p>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-[#F5F5F0] flex flex-col">
       {/* Header */}
       <header className="px-4 pt-6 pb-3 flex items-center justify-between">
-        <button type="button" className="flex items-center text-[#7B5A2F] text-sm gap-1">
+        <button type="button" className="flex items-center text-[#7B5A2F] text-sm gap-1" onClick={() => router.back()}>
           <ArrowLeft className="w-4 h-4" />
           <span>Back</span>
         </button>

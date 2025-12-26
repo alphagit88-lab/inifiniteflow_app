@@ -1,15 +1,31 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ArrowLeft, Search as SearchIcon } from 'lucide-react'
+import { getCurrentUser } from '@/lib/supabase/auth'
 
 export default function SearchPage() {
+  const router = useRouter()
   const [query, setQuery] = useState('')
   const [showResults, setShowResults] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    async function checkAuth() {
+      const user = await getCurrentUser()
+      if (!user) {
+        router.push('/users/login')
+        return
+      }
+      setIsLoading(false)
+    }
+    checkAuth()
+  }, [router])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -21,11 +37,19 @@ export default function SearchPage() {
     setShowResults(true)
   }
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F0] flex items-center justify-center">
+        <p className="text-[#666]">Loading...</p>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-[#F5F5F0] flex flex-col">
       {/* Header */}
       <header className="px-4 pt-6 pb-3 flex items-center gap-2">
-        <button type="button" className="text-[#7B5A2F]">
+        <button type="button" className="text-[#7B5A2F]" onClick={() => router.back()}>
           <ArrowLeft className="w-4 h-4" />
         </button>
         <h1 className="text-sm font-semibold text-[#333]">Search</h1>
