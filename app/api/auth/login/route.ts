@@ -43,45 +43,55 @@ export async function POST(request: Request) {
       )
     }
 
-    // Update last_sign_in_at in users table
-    const { data: updatedUser, error: updateError } = await supabaseAdmin
-      .from('users')
-      .update({ last_sign_in_at: new Date().toISOString() })
-      .eq('uid', authData.user.id)
-      .select('uid, display_name, email, phone, provider, provider_type, created_at, last_sign_in_at')
+    // Try to get/update profile in profiles table first
+    let userData = null
+    
+    // Try profiles table
+    const { data: profileData, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .eq('user_id', authData.user.id)
       .single()
 
-    if (updateError) {
-      // Even if update fails, authentication was successful, so we still return success
-      // but log the error
-      console.error('Error updating last_sign_in_at:', updateError.message)
+    if (!profileError && profileData) {
+      // Update last login
+      await supabaseAdmin
+        .from('profiles')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('user_id', authData.user.id)
       
-      // Try to get user data without updating
-      const { data: userData } = await supabaseAdmin
+      userData = {
+        user_id: profileData.user_id,
+        email: profileData.email || authData.user.email,
+        nickname: profileData.nickname,
+        user_type: profileData.user_type,
+        subscription_status: profileData.subscription_status,
+        created_at: profileData.created_at,
+      }
+    } else {
+      // Try users table as fallback
+      const { data: usersData, error: usersError } = await supabaseAdmin
         .from('users')
-        .select('uid, display_name, email, phone, provider, provider_type, created_at, last_sign_in_at')
+        .select('*')
         .eq('uid', authData.user.id)
         .single()
 
-      return NextResponse.json(
-        {
-          success: true,
-          message: 'Login successful',
-          user: userData || {
-            uid: authData.user.id,
-            email: authData.user.email,
-          },
-          session: authData.session,
-        },
-        { status: 200 }
-      )
+      if (!usersError && usersData) {
+        userData = usersData
+      } else {
+        // Return basic info if no profile found
+        userData = {
+          user_id: authData.user.id,
+          email: authData.user.email,
+        }
+      }
     }
 
     return NextResponse.json(
       {
         success: true,
         message: 'Login successful',
-        user: updatedUser,
+        user: userData,
         session: authData.session,
       },
       { status: 200 }
