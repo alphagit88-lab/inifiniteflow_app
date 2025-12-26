@@ -92,7 +92,7 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen flex flex-col bg-[#F5F5F0]">
       {/* Hero / Header */}
-      <div className="relative h-[320px]">
+      <div className="relative h-80">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
@@ -298,15 +298,15 @@ function ClassCard({
   imageUrl: string
 }) {
   return (
-    <div className="w-44 shrink-0 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100">
+    <div className="w-56 md:w-64 shrink-0 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
       <div
-        className="h-28 bg-cover bg-center"
+        className="h-36 md:h-40 bg-cover bg-center"
         style={{ backgroundImage: `url(${imageUrl})` }}
       />
-      <div className="p-3 space-y-1">
-        <h3 className="text-sm font-semibold text-[#333] line-clamp-1">{title}</h3>
-        <p className="text-xs text-[#777] line-clamp-1">{subtitle}</p>
-        <span className="inline-flex mt-1 text-[11px] px-2 py-0.5 rounded-full bg-[#E0F2FE] text-[#0369A1]">
+      <div className="p-4 space-y-1.5">
+        <h3 className="text-base font-semibold text-[#333] line-clamp-1">{title}</h3>
+        <p className="text-sm text-[#777] line-clamp-1">{subtitle}</p>
+        <span className="inline-flex mt-1.5 text-xs px-2.5 py-1 rounded-full bg-[#E0F2FE] text-[#0369A1]">
           {tag}
         </span>
       </div>
@@ -324,14 +324,14 @@ function MealCard({
   imageUrl: string
 }) {
   return (
-    <div className="w-40 shrink-0 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100">
+    <div className="w-52 md:w-60 shrink-0 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
       <div
-        className="h-24 bg-cover bg-center"
+        className="h-32 md:h-36 bg-cover bg-center"
         style={{ backgroundImage: `url(${imageUrl})` }}
       />
-      <div className="p-3 space-y-1">
-        <h3 className="text-sm font-semibold text-[#333] line-clamp-1">{title}</h3>
-        <p className="text-xs text-[#777] line-clamp-1">{subtitle}</p>
+      <div className="p-4 space-y-1.5">
+        <h3 className="text-base font-semibold text-[#333] line-clamp-1">{title}</h3>
+        <p className="text-sm text-[#777] line-clamp-1">{subtitle}</p>
       </div>
     </div>
   )
@@ -347,14 +347,14 @@ function TrainerCard({
   imageUrl: string
 }) {
   return (
-    <div className="w-44 shrink-0 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100">
+    <div className="w-56 md:w-64 shrink-0 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
       <div
-        className="h-32 bg-cover bg-center"
+        className="h-40 md:h-44 bg-cover bg-center"
         style={{ backgroundImage: `url(${imageUrl})` }}
       />
-      <div className="p-3 space-y-1">
-        <h3 className="text-sm font-semibold text-[#333]">{name}</h3>
-        <p className="text-xs text-[#777] line-clamp-2">{title}</p>
+      <div className="p-4 space-y-1.5">
+        <h3 className="text-base font-semibold text-[#333]">{name}</h3>
+        <p className="text-sm text-[#777] line-clamp-2">{title}</p>
       </div>
     </div>
   )
