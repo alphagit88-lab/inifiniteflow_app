@@ -44,22 +44,22 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check if email already exists
-    const { data: existingUser, error: checkError } = await supabaseAdmin
-      .from('users')
+    // Check if email already exists in profiles table
+    const { data: existingProfiles, error: checkError } = await supabaseAdmin
+      .from('profiles')
       .select('email')
       .eq('email', payload.email.trim().toLowerCase())
-      .single()
+      .limit(1)
 
-    if (checkError && checkError.code !== 'PGRST116') {
-      // PGRST116 is "not found" error, which is fine
+    if (checkError) {
+      console.error('Error checking email:', checkError)
       return NextResponse.json(
         { error: 'Error checking email availability' },
         { status: 500 }
       )
     }
 
-    if (existingUser) {
+    if (existingProfiles && existingProfiles.length > 0) {
       return NextResponse.json(
         { error: 'Email already registered' },
         { status: 409 }
@@ -87,22 +87,36 @@ export async function POST(request: Request) {
       )
     }
 
-    // Create user record in users table
-    const userData = {
-      uid: authData.user.id,
-      display_name: payload.display_name.trim(),
+    // Create user profile record in profiles table
+    const profileData = {
+      user_id: authData.user.id,
       email: payload.email.trim().toLowerCase(),
-      phone: payload.phone?.trim() || null,
-      provider: payload.provider || 'email',
-      provider_type: payload.provider_type || 'local',
+      first_name: payload.display_name.trim().split(' ')[0] || 'User',
+      last_name: payload.display_name.trim().split(' ').slice(1).join(' ') || '',
+      nickname: payload.display_name.trim(),
+      user_type: 'S', // S for standard user
+      profile_picture: null,
+      date_of_birth: '2000-01-01', // Default date, user should update in onboarding
+      gender: 'Other',
+      subscription_plan: 1,
+      subscription_status: 'inactive', // lowercase to match CHECK constraint
+      subscription_start_date: null,
+      subscription_end_date: null,
+      height: 170,
+      height_unit: 'cm',
+      weight: 70,
+      weight_unit: 'kg',
+      activity_level: 'Moderate',
+      dietary_preference: 'None',
+      allergies: [],
       created_at: new Date().toISOString(),
-      last_sign_in_at: null, // Will be updated on first sign in
+      updated_at: new Date().toISOString(),
     }
 
     const { data: userRecord, error: userError } = await supabaseAdmin
-      .from('users')
-      .insert(userData)
-      .select('uid, display_name, email, phone, provider, provider_type, created_at, last_sign_in_at')
+      .from('profiles')
+      .insert(profileData)
+      .select('user_id, nickname, email, first_name, last_name, user_type, subscription_status, created_at')
       .single()
 
     if (userError) {
