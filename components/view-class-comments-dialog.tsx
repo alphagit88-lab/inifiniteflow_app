@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Loader2, MessageSquare, User, Trash2, Eye, EyeOff } from 'lucide-react'
+import { Loader2, MessageSquare, User, Trash2, Eye, EyeOff, Video } from 'lucide-react'
 
 interface ViewClassCommentsDialogProps {
   classId: string | null
@@ -16,6 +16,7 @@ interface ViewClassCommentsDialogProps {
 interface Comment {
   comment_id: string
   class_id: string
+  video_id: string
   user_id: string
   comment_text: string
   created_at: string
@@ -25,6 +26,13 @@ interface Comment {
     user_id: string
     nickname: string | null
     email: string | null
+  } | null
+  video: {
+    video_id: string
+    description: string | null
+    meta_title: string | null
+    thumbnail_url: string | null
+    mux_playback_id: string | null
   } | null
 }
 
@@ -89,6 +97,15 @@ export function ViewClassCommentsDialog({ classId, className, open, onClose }: V
       return comment.user.email.split('@')[0]
     }
     return 'Unknown User'
+  }
+
+  const getThumbnailUrl = (video: Comment['video']): string | null => {
+    if (!video) return null
+    if (video.thumbnail_url) return video.thumbnail_url
+    if (video.mux_playback_id) {
+      return `https://image.mux.com/${video.mux_playback_id}/thumbnail.jpg?width=160&height=90&fit_mode=smartcrop`
+    }
+    return null
   }
 
   const handleDelete = async (commentId: string) => {
@@ -170,7 +187,7 @@ export function ViewClassCommentsDialog({ classId, className, open, onClose }: V
             Comments for: {className}
           </DialogTitle>
           <DialogDescription>
-            View all comments added by users for this class
+            View all comments added by users for videos in this class
           </DialogDescription>
         </DialogHeader>
 
@@ -186,7 +203,7 @@ export function ViewClassCommentsDialog({ classId, className, open, onClose }: V
         ) : comments.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">
             <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No comments found for this class.</p>
+            <p>No comments found for videos in this class.</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -199,6 +216,7 @@ export function ViewClassCommentsDialog({ classId, className, open, onClose }: V
               const isHidden = comment.is_marked_hidden
               const isDeleting = deletingId === comment.comment_id
               const isUpdating = updatingId === comment.comment_id
+              const videoTitle = comment.video?.meta_title || comment.video?.description || 'Unknown Video'
 
               return (
                 <Card
@@ -206,6 +224,25 @@ export function ViewClassCommentsDialog({ classId, className, open, onClose }: V
                   className={`p-4 ${isHidden ? 'bg-gray-50 border-gray-200 opacity-75' : ''}`}
                 >
                   <div className="space-y-3">
+                    {/* Video Info */}
+                    <div className="flex items-center gap-3 text-sm pb-2 border-b">
+                      {getThumbnailUrl(comment.video) && (
+                        <div className="relative w-24 h-14 flex-shrink-0 rounded-md overflow-hidden border">
+                          <img
+                            src={getThumbnailUrl(comment.video)!}
+                            alt="Video thumbnail"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <Video className={`h-4 w-4 flex-shrink-0 ${isHidden ? 'text-gray-400' : 'text-blue-600'}`} />
+                        <span className={`font-medium truncate ${isHidden ? 'text-gray-500' : 'text-blue-700'}`}>
+                          Video: {videoTitle}
+                        </span>
+                      </div>
+                    </div>
+
                     {/* User Info */}
                     <div className="flex items-center gap-2 text-sm">
                       <User className={`h-4 w-4 ${isHidden ? 'text-gray-400' : 'text-muted-foreground'}`} />
