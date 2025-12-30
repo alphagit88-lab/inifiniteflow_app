@@ -20,6 +20,9 @@ importers:
       '@mux/upchunk':
         specifier: ^3.5.0
         version: 3.5.0
+      '@netlify/plugin-nextjs':
+        specifier: ^5.15.3
+        version: 5.15.3
       '@radix-ui/react-accordion':
         specifier: 1.2.2
         version: 1.2.2(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -418,6 +421,10 @@ packages:
 
   '@mux/upchunk@3.5.0':
     resolution: {integrity: sha512-D+TtvlujlZQjh5I+vFzJ31h5E1uVpEaLdR8M3BNaCFbVLnFMZs8J/L/fYSUyVGnyHT/yDtPHn/IHKdo3G6oSjA==}
+
+  '@netlify/plugin-nextjs@5.15.3':
+    resolution: {integrity: sha512-l3SicRpOy+27VTZbIhEgI89+uY+1Y3CsMZW3mfKBFC4A/sP7u33ftDZ45m6634dUcc6BnLNxPIxL6TiBdvqxOQ==}
+    engines: {node: '>=18.0.0'}
 
   '@next/env@16.0.10':
     resolution: {integrity: sha512-8tuaQkyDVgeONQ1MeT9Mkk8pQmZapMKFh5B+OrFUlG3rVmYTXcXlBetBgTurKXGaIZvkoqRT9JL5K3phXcgang==}
@@ -2228,6 +2235,8 @@ snapshots:
     dependencies:
       event-target-shim: 6.0.2
       xhr: 2.6.0
+
+  '@netlify/plugin-nextjs@5.15.3': {}
 
   '@next/env@16.0.10': {}
 
