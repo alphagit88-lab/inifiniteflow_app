@@ -3,72 +3,19 @@
 import { createClient } from '@supabase/supabase-js'
 
 /**
- * Supabase URL and Service Role Key (Admin Access)
+ * Supabase credentials
  */
 const supabaseUrl = 'https://ocfufnbhqxzwsrxxulup.supabase.co'
 const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9jZnVmbmJocXh6d3NyeHh1bHVwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzMzMTQ0NywiZXhwIjoyMDc4OTA3NDQ3fQ.B9JSyL6eTg99732hPbUFazai3tLwqGMf2j9zxUx7mfo'
 
 /**
- * Interface representing class banner data fields.
- */
-export interface ClassBanner {
-  banner_id: string
-  image_url: string
-  title: string | null
-  subtitle: string | null
-  is_active: boolean
-  display_order: number
-  created_at: string
-  updated_at: string
-}
-
-/**
- * Fetches all class banners from the database.
- * Uses the Service Role Key to ensure administrative access and bypass RLS.
- *
- * @returns An object containing success status, an array of ClassBanner data, or an error message.
- */
-export async function getClassBanners(): Promise<{
-  success: boolean
-  data: ClassBanner[] | null
-  error: string | null
-}> {
-  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
-
-  try {
-    const { data, error } = await supabaseAdmin
-      .from('class_banners')
-      .select('*')
-      .order('display_order', { ascending: true })
-
-    if (error) {
-      console.error('[getClassBanners] Error fetching banners:', error)
-      return { success: false, data: null, error: 'Database query failed (Service Role): ' + error.message }
-    }
-
-    const banners = (data || []) as ClassBanner[]
-
-    return { success: true, data: banners, error: null }
-  } catch (err) {
-    console.error('[getClassBanners] Unexpected error:', err)
-    return {
-      success: false,
-      data: null,
-      error: err instanceof Error ? err.message : 'An unknown runtime error occurred while fetching banners.',
-    }
-  }
-}
-
-/**
- * Server Action to upload a banner image for a class to Supabase Storage
+ * Server Action to upload a banner image to Supabase Storage
  * 
  * @param file - The image file to upload (JPEG, PNG, or WebP)
- * @param classId - The class ID to associate the banner with
  * @returns An object containing success status, the public URL of the uploaded banner, or an error message
  */
-export async function uploadBanner(
-  file: File,
-  classId: string
+export async function uploadBannerImage(
+  file: File
 ): Promise<{
   success: boolean
   url?: string
@@ -108,11 +55,11 @@ export async function uploadBanner(
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
 
     // Check if bucket exists, create if it doesn't
-    const bucketName = 'class-banners'
+    const bucketName = 'banners'
     const { data: buckets, error: listError } = await supabaseAdmin.storage.listBuckets()
     
     if (listError) {
-      console.error('[uploadBanner] Error listing buckets:', listError)
+      console.error('[uploadBannerImage] Error listing buckets:', listError)
     } else {
       const bucketExists = buckets?.some(bucket => bucket.name === bucketName)
       if (!bucketExists) {
@@ -124,7 +71,7 @@ export async function uploadBanner(
         })
         
         if (createError) {
-          console.error('[uploadBanner] Error creating bucket:', createError)
+          console.error('[uploadBannerImage] Error creating bucket:', createError)
           return {
             success: false,
             error: `Storage bucket '${bucketName}' does not exist and could not be created. Please create it manually in Supabase Dashboard: Storage > New bucket. Error: ${createError.message}`,
@@ -134,8 +81,8 @@ export async function uploadBanner(
     }
 
     // Generate unique filename
-    const fileName = `${classId}-${Date.now()}.${fileExt}`
-    const filePath = `class-banners/${fileName}`
+    const fileName = `banner-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+    const filePath = `banners/${fileName}`
 
     // Convert File to ArrayBuffer for Supabase upload
     const arrayBuffer = await file.arrayBuffer()
@@ -149,7 +96,7 @@ export async function uploadBanner(
       })
 
     if (uploadError) {
-      console.error('[uploadBanner] Error uploading banner:', uploadError)
+      console.error('[uploadBannerImage] Error uploading banner:', uploadError)
       
       // Provide helpful error message if bucket doesn't exist
       if (uploadError.message.includes('Bucket not found') || uploadError.message.includes('not found')) {
@@ -182,10 +129,11 @@ export async function uploadBanner(
       url: urlData.publicUrl,
     }
   } catch (err) {
-    console.error('[uploadBanner] Unexpected error:', err)
+    console.error('[uploadBannerImage] Unexpected error:', err)
     return {
       success: false,
       error: err instanceof Error ? err.message : 'An unknown error occurred while uploading the banner.',
     }
   }
 }
+

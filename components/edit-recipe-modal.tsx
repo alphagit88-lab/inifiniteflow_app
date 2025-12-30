@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
 import type { Recipe } from '@/actions/recipes'
-import { uploadBanner } from '@/app/actions/banners'
 import { useRef } from 'react'
 
 const DIFFICULTY_OPTIONS = ['Easy', 'Medium', 'Hard', 'Expert'] as const
@@ -79,9 +78,6 @@ export function EditRecipeModal({ recipe, onClose, onRecipeUpdated }: EditRecipe
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [selectedBanner, setSelectedBanner] = useState<File | null>(null)
-  const [bannerPreview, setBannerPreview] = useState<string | null>(null)
-  const bannerInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (recipe) {
@@ -105,9 +101,6 @@ export function EditRecipeModal({ recipe, onClose, onRecipeUpdated }: EditRecipe
         fiber_grams: recipe.fiber_grams?.toString() || '',
         meal_type: (recipe as any).meal_type || '',
       })
-      setSelectedBanner(null)
-      const existingBanner = (recipe as any).banner_image
-      setBannerPreview(existingBanner || null)
       setError(null)
     }
   }, [recipe])
@@ -133,20 +126,6 @@ export function EditRecipeModal({ recipe, onClose, onRecipeUpdated }: EditRecipe
     setError(null)
 
     try {
-      // Upload banner image if selected
-      let bannerUrl = (recipe as any).banner_image || null
-      if (selectedBanner) {
-        const bannerResult = await uploadBanner(selectedBanner, recipe.recipe_id)
-        if (bannerResult.success && bannerResult.url) {
-          bannerUrl = bannerResult.url
-        } else {
-          console.warn('Failed to upload banner:', bannerResult.error)
-          setError(bannerResult.error || 'Failed to upload banner')
-          setIsSubmitting(false)
-          return
-        }
-      }
-
       const response = await fetch(`/api/recipes/${recipe.recipe_id}`, {
         method: 'PATCH',
         headers: {
@@ -169,7 +148,6 @@ export function EditRecipeModal({ recipe, onClose, onRecipeUpdated }: EditRecipe
           fat_grams: formData.fat_grams ? parseFloat(formData.fat_grams) : null,
           fiber_grams: formData.fiber_grams ? parseFloat(formData.fiber_grams) : null,
           meal_type: formData.meal_type || null,
-          banner_image: bannerUrl,
         }),
       })
 
@@ -323,40 +301,6 @@ export function EditRecipeModal({ recipe, onClose, onRecipeUpdated }: EditRecipe
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="edit-banner">Banner Image (JPEG, PNG, or WebP)</Label>
-            <div className="space-y-2">
-              <Input
-                id="edit-banner"
-                type="file"
-                accept=".jpeg,.jpg,.png,.webp,image/jpeg,image/png,image/webp"
-                ref={bannerInputRef}
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) {
-                    setSelectedBanner(file)
-                    const reader = new FileReader()
-                    reader.onloadend = () => {
-                      setBannerPreview(reader.result as string)
-                    }
-                    reader.readAsDataURL(file)
-                  }
-                }}
-                disabled={isSubmitting}
-                className="cursor-pointer"
-              />
-              {bannerPreview && (
-                <div className="mt-2">
-                  <img
-                    src={bannerPreview}
-                    alt="Banner preview"
-                    className="max-w-full max-h-[200px] object-contain border rounded-md"
-                  />
-                </div>
-              )}
             </div>
           </div>
 
