@@ -15,6 +15,7 @@ import { getVideos, type Video } from '@/app/actions/mux'
 import { getClassVideos, createClassVideo, deleteClassVideo, updateClassVideo, updateClassVideoOrder, type ClassVideo } from '@/app/actions/class-videos'
 import { getInstructors, type Instructor } from '@/actions/instructors'
 import { uploadBadge } from '@/app/actions/badges'
+import { uploadBanner } from '@/app/actions/banners'
 import { Trash2, Plus, Play, GripVertical } from 'lucide-react'
 
 const INTENSITY_OPTIONS = ['Low', 'Medium', 'High', 'Very High'] as const
@@ -45,6 +46,9 @@ export function AddClassModal({ open, onClose, onClassCreated }: AddClassModalPr
   const [selectedBadge, setSelectedBadge] = useState<File | null>(null)
   const [badgePreview, setBadgePreview] = useState<string | null>(null)
   const badgeInputRef = useRef<HTMLInputElement>(null)
+  const [selectedBanner, setSelectedBanner] = useState<File | null>(null)
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null)
+  const bannerInputRef = useRef<HTMLInputElement>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [availableVideos, setAvailableVideos] = useState<Video[]>([])
@@ -152,6 +156,8 @@ export function AddClassModal({ open, onClose, onClassCreated }: AddClassModalPr
       })
       setSelectedBadge(null)
       setBadgePreview(null)
+      setSelectedBanner(null)
+      setBannerPreview(null)
       setPendingVideos([])
       setClassVideos([])
       setSelectedVideoId('')
@@ -229,6 +235,27 @@ export function AddClassModal({ open, onClose, onClassCreated }: AddClassModalPr
           })
         } else {
           console.warn('Failed to upload badge:', badgeResult.error)
+        }
+      }
+
+      // Upload banner image if selected
+      let bannerUrl = null
+      if (selectedBanner) {
+        const bannerResult = await uploadBanner(selectedBanner, payload.data.class_id)
+        if (bannerResult.success && bannerResult.url) {
+          bannerUrl = bannerResult.url
+          // Update class with banner URL
+          await fetch(`/api/classes/${payload.data.class_id}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              banner_image: bannerUrl,
+            }),
+          })
+        } else {
+          console.warn('Failed to upload banner:', bannerResult.error)
         }
       }
 
@@ -613,6 +640,40 @@ export function AddClassModal({ open, onClose, onClassCreated }: AddClassModalPr
                 rows={3}
                 disabled={isSubmitting}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="add-banner">Banner Image (JPEG, PNG, or WebP)</Label>
+              <div className="space-y-2">
+                <Input
+                  id="add-banner"
+                  type="file"
+                  accept=".jpeg,.jpg,.png,.webp,image/jpeg,image/png,image/webp"
+                  ref={bannerInputRef}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      setSelectedBanner(file)
+                      const reader = new FileReader()
+                      reader.onloadend = () => {
+                        setBannerPreview(reader.result as string)
+                      }
+                      reader.readAsDataURL(file)
+                    }
+                  }}
+                  disabled={isSubmitting}
+                  className="cursor-pointer"
+                />
+                {bannerPreview && (
+                  <div className="mt-2">
+                    <img
+                      src={bannerPreview}
+                      alt="Banner preview"
+                      className="max-w-full max-h-[200px] object-contain border rounded-md"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">

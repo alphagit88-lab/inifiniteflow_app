@@ -35,6 +35,8 @@ export interface Recipe {
   carbs_grams?: number | null
   fat_grams?: number | null
   fiber_grams?: number | null
+  meal_type?: string | null
+  banner_image?: string | null
 }
 
 /**

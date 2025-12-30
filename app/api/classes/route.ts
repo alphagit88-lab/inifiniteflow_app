@@ -47,6 +47,7 @@ export async function POST(request: Request) {
     video_url: payload.video_url || '',
     thumbnail_image: payload.thumbnail_image || '',
     equipment_list: payload.equipment_list || [],
+    banner_image: payload.banner_image || null,
     view_count: 0,
     completion_count: 0,
   }

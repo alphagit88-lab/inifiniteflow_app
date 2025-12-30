@@ -7,13 +7,13 @@ const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
 
 interface RouteContext {
-  params: {
+  params: Promise<{
     recipeId: string
-  }
+  }>
 }
 
 export async function DELETE(_: Request, { params }: RouteContext) {
-  const { recipeId } = params
+  const { recipeId } = await params
 
   if (!recipeId) {
     return NextResponse.json({ error: 'Recipe ID is required' }, { status: 400 })
@@ -29,7 +29,7 @@ export async function DELETE(_: Request, { params }: RouteContext) {
 }
 
 export async function PATCH(request: Request, { params }: RouteContext) {
-  const { recipeId } = params
+  const { recipeId } = await params
 
   if (!recipeId) {
     return NextResponse.json({ error: 'Recipe ID is required' }, { status: 400 })
@@ -101,6 +101,14 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
   if (typeof payload.fiber_grams === 'number' || payload.fiber_grams === null) {
     updates.fiber_grams = payload.fiber_grams
+  }
+
+  if (typeof payload.meal_type === 'string' || payload.meal_type === null) {
+    updates.meal_type = payload.meal_type ? payload.meal_type.trim() : null
+  }
+
+  if (typeof payload.banner_image === 'string' || payload.banner_image === null) {
+    updates.banner_image = payload.banner_image ? payload.banner_image.trim() : null
   }
 
   if (Object.keys(updates).length === 0) {

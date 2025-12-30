@@ -37,6 +37,7 @@ export interface Class {
   image_gallery?: string[] | null
   notes?: string | null
   average_rating?: number | null
+  banner_image?: string | null
 }
 
 /**

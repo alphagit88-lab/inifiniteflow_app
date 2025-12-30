@@ -7,6 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card } from '@/components/ui/card'
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext } from '@/components/ui/pagination'
 import { Instructor, getInstructors } from '@/actions/instructors'
+import { AddInstructorModal } from './add-instructor-modal'
+import { EditInstructorModal } from './edit-instructor-modal'
+import { Plus } from 'lucide-react'
 
 interface InstructorDisplay {
   instructor_id: string
@@ -43,6 +46,9 @@ export function InstructorsDataTable({ initialInstructors = [] }: { initialInstr
   const [currentPage, setCurrentPage] = useState(1)
   const [error, setError] = useState<string | null>(null)
   const [isInitialLoading, setIsInitialLoading] = useState(initialInstructors.length === 0)
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [editingInstructor, setEditingInstructor] = useState<Instructor | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(() => {
     if (initialInstructors.length === 0) {
@@ -111,6 +117,62 @@ export function InstructorsDataTable({ initialInstructors = [] }: { initialInstr
     return 'bg-red-100 text-red-800'
   }
 
+  const handleDeleteInstructor = async (instructorId: string) => {
+    if (!confirm('Are you sure you want to delete this instructor?')) return
+
+    setError(null)
+    setDeletingId(instructorId)
+    try {
+      const response = await fetch(`/api/instructors/${instructorId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload?.error || 'Failed to delete instructor')
+      }
+
+      setInstructors((prev) => prev.filter((inst) => inst.instructor_id !== instructorId))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to delete instructor')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const handleEditClick = (instructor: InstructorDisplay) => {
+    // Convert InstructorDisplay to Instructor format
+    const instructorData: Instructor = {
+      instructor_id: instructor.instructor_id,
+      bio: instructor.bio,
+      is_featured: instructor.is_featured,
+      total_students: instructor.total_students,
+      total_classes: instructor.total_classes,
+      joined_at: instructor.joined_at,
+      specialization: instructor.specialization,
+      certifications: instructor.certifications,
+      years_experience: instructor.years_experience,
+      rating: instructor.rating,
+    }
+    setEditingInstructor(instructorData)
+  }
+
+  const handleInstructorUpdated = (updatedInstructor: Instructor) => {
+    setInstructors((prev) =>
+      prev.map((inst) =>
+        inst.instructor_id === updatedInstructor.instructor_id ? normalizeInstructor(updatedInstructor) : inst
+      )
+    )
+    setEditingInstructor(null)
+  }
+
+  const handleInstructorCreated = (newInstructor: Instructor) => {
+    setInstructors((prev) => [normalizeInstructor(newInstructor), ...prev])
+    setIsAddModalOpen(false)
+  }
+
+  const closeEditModal = () => setEditingInstructor(null)
+
   // Custom spinner/loader
   const Spinner = () => (
     <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -135,6 +197,10 @@ export function InstructorsDataTable({ initialInstructors = [] }: { initialInstr
             disabled={isInitialLoading}
           />
         </div>
+        <Button onClick={() => setIsAddModalOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Instructor
+        </Button>
       </div>
 
       {error && <p className="text-sm text-red-600 border border-red-200 bg-red-50 p-3 rounded-lg">{error}</p>}
@@ -230,11 +296,23 @@ export function InstructorsDataTable({ initialInstructors = [] }: { initialInstr
                       <TableCell className="text-sm text-gray-500">{formatDate(instructor.joined_at)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
-                          <Button variant="outline" size="sm" disabled>
+                          <Button variant="outline" size="sm" onClick={() => handleEditClick(instructor)}>
                             Edit
                           </Button>
-                          <Button variant="destructive" size="sm" disabled>
-                            Delete
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteInstructor(instructor.instructor_id)}
+                            disabled={deletingId === instructor.instructor_id}
+                          >
+                            {deletingId === instructor.instructor_id ? (
+                              <>
+                                <Spinner />
+                                Deleting...
+                              </>
+                            ) : (
+                              'Delete'
+                            )}
                           </Button>
                         </div>
                       </TableCell>
@@ -289,6 +367,20 @@ export function InstructorsDataTable({ initialInstructors = [] }: { initialInstr
           </Pagination>
         </div>
       )}
+
+      {/* Add Modal */}
+      <AddInstructorModal
+        open={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onInstructorCreated={handleInstructorCreated}
+      />
+
+      {/* Edit Modal */}
+      <EditInstructorModal
+        instructor={editingInstructor}
+        onClose={closeEditModal}
+        onInstructorUpdated={handleInstructorUpdated}
+      />
     </div>
   )
 }

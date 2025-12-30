@@ -51,6 +51,8 @@ export async function POST(request: Request) {
     carbs_grams: payload.carbs_grams || null,
     fat_grams: payload.fat_grams || null,
     fiber_grams: payload.fiber_grams || null,
+    meal_type: payload.meal_type || null,
+    banner_image: payload.banner_image || null,
     // Set default values for fields that might be required by the schema
     image_url: payload.image_url || '',
     ingredients: payload.ingredients || [],
