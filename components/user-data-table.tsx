@@ -81,9 +81,10 @@ export function UserDataTable({ initialUsers = [] }: { initialUsers: Profile[] }
   const filteredUsers = useMemo(() => {
     return users.filter(
       (user) =>
-        user.nickname.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.userType.toLowerCase().includes(searchTerm.toLowerCase())
+        // Adding (user.prop || '') ensures we always call toLowerCase on a string
+        (user.nickname || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (user.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (user.userType || '').toLowerCase().includes(searchTerm.toLowerCase())
     )
   }, [users, searchTerm])
 

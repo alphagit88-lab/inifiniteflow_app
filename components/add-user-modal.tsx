@@ -14,7 +14,14 @@ interface AddUserModalProps {
   onUserCreated: (user: Profile) => void
 }
 
-const SUBSCRIPTION_OPTIONS = ['Active', 'Inactive', 'Pending'] as const
+const SUBSCRIPTION_OPTIONS = ['active', 'inactive', 'cancelled'] as const
+
+// Display labels for the subscription status options
+const SUBSCRIPTION_LABELS: Record<string, string> = {
+  active: 'Active',
+  inactive: 'Inactive',
+  cancelled: 'Cancelled',
+}
 
 export function AddUserModal({ isOpen, onOpenChange, onUserCreated }: AddUserModalProps) {
   const [formData, setFormData] = useState({
@@ -123,7 +130,7 @@ export function AddUserModal({ isOpen, onOpenChange, onUserCreated }: AddUserMod
               <SelectContent>
                 {SUBSCRIPTION_OPTIONS.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {SUBSCRIPTION_LABELS[option] || option}
                   </SelectItem>
                 ))}
               </SelectContent>

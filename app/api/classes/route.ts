@@ -39,12 +39,15 @@ export async function POST(request: Request) {
     notes: payload.notes ? payload.notes.trim() : null,
     challenge: payload.challenge !== undefined ? payload.challenge : false,
     badge: payload.badge ? payload.badge.trim() : null,
+    challenge_start_date: payload.challenge_start_date ? new Date(payload.challenge_start_date).toISOString() : null,
+    challenge_end_date: payload.challenge_end_date ? new Date(payload.challenge_end_date).toISOString() : null,
     // Set required instructor_id
     instructor_id: payload.instructor_id,
     body_area: payload.body_area || [],
     video_url: payload.video_url || '',
     thumbnail_image: payload.thumbnail_image || '',
     equipment_list: payload.equipment_list || [],
+    banner_image: payload.banner_image || null,
     view_count: 0,
     completion_count: 0,
   }
