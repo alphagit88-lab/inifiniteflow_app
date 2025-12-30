@@ -9,8 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
 import type { Recipe } from '@/actions/recipes'
+import { uploadBanner } from '@/app/actions/banners'
+import { useRef } from 'react'
 
 const DIFFICULTY_OPTIONS = ['Easy', 'Medium', 'Hard', 'Expert'] as const
+const MEAL_TYPE_OPTIONS = ['Breakfast', 'Lunch', 'Dinner'] as const
 
 interface AddRecipeModalProps {
   open: boolean
@@ -35,6 +38,7 @@ export function AddRecipeModal({ open, onClose, onRecipeCreated }: AddRecipeModa
     carbs_grams: string
     fat_grams: string
     fiber_grams: string
+    meal_type: (typeof MEAL_TYPE_OPTIONS)[number] | ''
   }>({
     recipe_name: '',
     description: '',
@@ -51,9 +55,13 @@ export function AddRecipeModal({ open, onClose, onRecipeCreated }: AddRecipeModa
     carbs_grams: '',
     fat_grams: '',
     fiber_grams: '',
+    meal_type: '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedBanner, setSelectedBanner] = useState<File | null>(null)
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null)
+  const bannerInputRef = useRef<HTMLInputElement>(null)
 
   const resetForm = () => {
     setFormData({
@@ -72,7 +80,10 @@ export function AddRecipeModal({ open, onClose, onRecipeCreated }: AddRecipeModa
       carbs_grams: '',
       fat_grams: '',
       fiber_grams: '',
+      meal_type: '',
     })
+    setSelectedBanner(null)
+    setBannerPreview(null)
     setError(null)
   }
 
@@ -121,6 +132,7 @@ export function AddRecipeModal({ open, onClose, onRecipeCreated }: AddRecipeModa
           carbs_grams: formData.carbs_grams ? parseFloat(formData.carbs_grams) : null,
           fat_grams: formData.fat_grams ? parseFloat(formData.fat_grams) : null,
           fiber_grams: formData.fiber_grams ? parseFloat(formData.fiber_grams) : null,
+          meal_type: formData.meal_type || null,
         }),
       })
 
@@ -128,6 +140,25 @@ export function AddRecipeModal({ open, onClose, onRecipeCreated }: AddRecipeModa
 
       if (!response.ok) {
         throw new Error(payload?.error || 'Failed to create recipe')
+      }
+
+      // Upload banner image if selected
+      if (selectedBanner && payload.data?.recipe_id) {
+        const bannerResult = await uploadBanner(selectedBanner, payload.data.recipe_id)
+        if (bannerResult.success && bannerResult.url) {
+          // Update recipe with banner URL
+          await fetch(`/api/recipes/${payload.data.recipe_id}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              banner_image: bannerResult.url,
+            }),
+          })
+        } else {
+          console.warn('Failed to upload banner:', bannerResult.error)
+        }
       }
 
       onRecipeCreated(payload.data)
@@ -252,16 +283,72 @@ export function AddRecipeModal({ open, onClose, onRecipeCreated }: AddRecipeModa
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="add-class-name">Class Name *</Label>
+              <Input
+                id="add-class-name"
+                placeholder="Breakfast Recipes"
+                value={formData.class_name}
+                onChange={(e) => setFormData({ ...formData, class_name: e.target.value })}
+                required
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="add-meal-type">Meal Type</Label>
+              <Select
+                value={formData.meal_type || undefined}
+                onValueChange={(value) => setFormData({ ...formData, meal_type: value as (typeof MEAL_TYPE_OPTIONS)[number] })}
+                disabled={isSubmitting}
+              >
+                <SelectTrigger id="add-meal-type">
+                  <SelectValue placeholder="Select meal type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MEAL_TYPE_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="add-class-name">Class Name *</Label>
-            <Input
-              id="add-class-name"
-              placeholder="Breakfast Recipes"
-              value={formData.class_name}
-              onChange={(e) => setFormData({ ...formData, class_name: e.target.value })}
-              required
-              disabled={isSubmitting}
-            />
+            <Label htmlFor="add-banner">Banner Image (JPEG, PNG, or WebP)</Label>
+            <div className="space-y-2">
+              <Input
+                id="add-banner"
+                type="file"
+                accept=".jpeg,.jpg,.png,.webp,image/jpeg,image/png,image/webp"
+                ref={bannerInputRef}
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    setSelectedBanner(file)
+                    const reader = new FileReader()
+                    reader.onloadend = () => {
+                      setBannerPreview(reader.result as string)
+                    }
+                    reader.readAsDataURL(file)
+                  }
+                }}
+                disabled={isSubmitting}
+                className="cursor-pointer"
+              />
+              {bannerPreview && (
+                <div className="mt-2">
+                  <img
+                    src={bannerPreview}
+                    alt="Banner preview"
+                    className="max-w-full max-h-[200px] object-contain border rounded-md"
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

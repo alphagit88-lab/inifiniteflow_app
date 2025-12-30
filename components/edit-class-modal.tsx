@@ -15,6 +15,7 @@ import { getVideos, type Video } from '@/app/actions/mux'
 import { getClassVideos, createClassVideo, deleteClassVideo, updateClassVideo, updateClassVideoOrder, type ClassVideo } from '@/app/actions/class-videos'
 import { getInstructors, type Instructor } from '@/actions/instructors'
 import { uploadBadge } from '@/app/actions/badges'
+import { uploadBanner } from '@/app/actions/banners'
 import { Trash2, Plus, Play, GripVertical } from 'lucide-react'
 
 const INTENSITY_OPTIONS = ['Low', 'Medium', 'High', 'Very High'] as const
@@ -56,10 +57,15 @@ export function EditClassModal({ classData, onClose, onClassUpdated }: EditClass
     notes: '',
     challenge: false,
     badge: '',
+    challenge_start_date: '',
+    challenge_end_date: '',
   })
   const [selectedBadge, setSelectedBadge] = useState<File | null>(null)
   const [badgePreview, setBadgePreview] = useState<string | null>(null)
   const badgeInputRef = useRef<HTMLInputElement>(null)
+  const [selectedBanner, setSelectedBanner] = useState<File | null>(null)
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null)
+  const bannerInputRef = useRef<HTMLInputElement>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [availableVideos, setAvailableVideos] = useState<Video[]>([])
@@ -158,6 +164,17 @@ export function EditClassModal({ classData, onClose, onClassUpdated }: EditClass
 
   useEffect(() => {
     if (classData) {
+      // Format dates for date input (YYYY-MM-DD)
+      const formatDateForInput = (dateString: string | null | undefined): string => {
+        if (!dateString) return ''
+        try {
+          const date = new Date(dateString)
+          return date.toISOString().split('T')[0]
+        } catch {
+          return ''
+        }
+      }
+
       setFormData({
         class_name: classData.class_name || '',
         description: classData.description || '',
@@ -175,10 +192,15 @@ export function EditClassModal({ classData, onClose, onClassUpdated }: EditClass
         notes: classData.notes || '',
         challenge: (classData as any).challenge || false,
         badge: (classData as any).badge || '',
+        challenge_start_date: formatDateForInput((classData as any).challenge_start_date),
+        challenge_end_date: formatDateForInput((classData as any).challenge_end_date),
       })
       setSelectedBadge(null)
       const existingBadge = (classData as any).badge
       setBadgePreview(existingBadge || null)
+      setSelectedBanner(null)
+      const existingBanner = (classData as any).banner_image
+      setBannerPreview(existingBanner || null)
       setError(null)
     }
   }, [classData])
@@ -223,6 +245,20 @@ export function EditClassModal({ classData, onClose, onClassUpdated }: EditClass
         }
       }
 
+      // Upload banner image if selected
+      let bannerUrl = (classData as any).banner_image || null
+      if (selectedBanner) {
+        const bannerResult = await uploadBanner(selectedBanner, classData.class_id)
+        if (bannerResult.success && bannerResult.url) {
+          bannerUrl = bannerResult.url
+        } else {
+          console.warn('Failed to upload banner:', bannerResult.error)
+          setError(bannerResult.error || 'Failed to upload banner')
+          setIsSubmitting(false)
+          return
+        }
+      }
+
       const response = await fetch(`/api/classes/${classData.class_id}`, {
         method: 'PATCH',
         headers: {
@@ -241,6 +277,9 @@ export function EditClassModal({ classData, onClose, onClassUpdated }: EditClass
           notes: formData.notes.trim() || null,
           challenge: formData.challenge,
           badge: badgeUrl || null,
+          banner_image: bannerUrl,
+          challenge_start_date: formData.challenge_start_date ? new Date(formData.challenge_start_date).toISOString() : null,
+          challenge_end_date: formData.challenge_end_date ? new Date(formData.challenge_end_date).toISOString() : null,
         }),
       })
 
@@ -617,6 +656,40 @@ export function EditClassModal({ classData, onClose, onClassUpdated }: EditClass
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="edit-banner">Banner Image (JPEG, PNG, or WebP)</Label>
+            <div className="space-y-2">
+              <Input
+                id="edit-banner"
+                type="file"
+                accept=".jpeg,.jpg,.png,.webp,image/jpeg,image/png,image/webp"
+                ref={bannerInputRef}
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    setSelectedBanner(file)
+                    const reader = new FileReader()
+                    reader.onloadend = () => {
+                      setBannerPreview(reader.result as string)
+                    }
+                    reader.readAsDataURL(file)
+                  }
+                }}
+                disabled={isSubmitting}
+                className="cursor-pointer"
+              />
+              {bannerPreview && (
+                <div className="mt-2">
+                  <img
+                    src={bannerPreview}
+                    alt="Banner preview"
+                    className="max-w-full max-h-[200px] object-contain border rounded-md"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2">
             <Label>Challenge</Label>
             <RadioGroup
               value={formData.challenge ? 'true' : 'false'}
@@ -635,46 +708,72 @@ export function EditClassModal({ classData, onClose, onClassUpdated }: EditClass
           </div>
 
           {formData.challenge && (
-            <div className="space-y-2">
-              <Label htmlFor="edit-badge">Badge Image (SVG, JPEG, or PNG)</Label>
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Input
-                  id="edit-badge"
-                  type="file"
-                  accept=".svg,.jpeg,.jpg,.png,image/svg+xml,image/jpeg,image/png"
-                  ref={badgeInputRef}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) {
-                      setSelectedBadge(file)
-                      const reader = new FileReader()
-                      reader.onloadend = () => {
-                        setBadgePreview(reader.result as string)
+                <Label htmlFor="edit-badge">Badge Image (SVG, JPEG, or PNG)</Label>
+                <div className="space-y-2">
+                  <Input
+                    id="edit-badge"
+                    type="file"
+                    accept=".svg,.jpeg,.jpg,.png,image/svg+xml,image/jpeg,image/png"
+                    ref={badgeInputRef}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        setSelectedBadge(file)
+                        const reader = new FileReader()
+                        reader.onloadend = () => {
+                          setBadgePreview(reader.result as string)
+                        }
+                        reader.readAsDataURL(file)
                       }
-                      reader.readAsDataURL(file)
-                    }
-                  }}
-                  disabled={isSubmitting}
-                  className="cursor-pointer"
-                />
-                {badgePreview && (
-                  <div className="mt-2">
-                    <img
-                      src={badgePreview}
-                      alt="Badge preview"
-                      className="max-w-[200px] max-h-[200px] object-contain border rounded-md"
-                    />
-                  </div>
-                )}
-                {formData.badge && !badgePreview && (
-                  <div className="mt-2">
-                    <img
-                      src={formData.badge}
-                      alt="Current badge"
-                      className="max-w-[200px] max-h-[200px] object-contain border rounded-md"
-                    />
-                  </div>
-                )}
+                    }}
+                    disabled={isSubmitting}
+                    className="cursor-pointer"
+                  />
+                  {badgePreview && (
+                    <div className="mt-2">
+                      <img
+                        src={badgePreview}
+                        alt="Badge preview"
+                        className="max-w-[200px] max-h-[200px] object-contain border rounded-md"
+                      />
+                    </div>
+                  )}
+                  {formData.badge && !badgePreview && (
+                    <div className="mt-2">
+                      <img
+                        src={formData.badge}
+                        alt="Current badge"
+                        className="max-w-[200px] max-h-[200px] object-contain border rounded-md"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-challenge-start-date">Start Challenge Date</Label>
+                  <Input
+                    id="edit-challenge-start-date"
+                    type="date"
+                    value={formData.challenge_start_date}
+                    onChange={(e) => setFormData({ ...formData, challenge_start_date: e.target.value })}
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-challenge-end-date">End Challenge Date</Label>
+                  <Input
+                    id="edit-challenge-end-date"
+                    type="date"
+                    value={formData.challenge_end_date}
+                    onChange={(e) => setFormData({ ...formData, challenge_end_date: e.target.value })}
+                    disabled={isSubmitting}
+                  />
+                </div>
               </div>
             </div>
           )}

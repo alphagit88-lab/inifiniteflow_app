@@ -8,7 +8,14 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import type { Profile } from '@/actions/profiles'
 
-const SUBSCRIPTION_OPTIONS = ['Active', 'Inactive', 'Pending'] as const
+const SUBSCRIPTION_OPTIONS = ['active', 'inactive', 'cancelled'] as const
+
+// Display labels for the subscription status options
+const SUBSCRIPTION_LABELS: Record<string, string> = {
+  active: 'Active',
+  inactive: 'Inactive',
+  cancelled: 'Cancelled',
+}
 
 type EditableProfile = Pick<Profile, 'user_id' | 'nickname' | 'email' | 'user_type' | 'subscription_status'>
 
@@ -129,7 +136,7 @@ export function EditUserModal({ user, onClose, onUserUpdated }: EditUserModalPro
               <SelectContent>
                 {SUBSCRIPTION_OPTIONS.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {SUBSCRIPTION_LABELS[option] || option}
                   </SelectItem>
                 ))}
               </SelectContent>

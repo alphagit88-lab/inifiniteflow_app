@@ -120,6 +120,18 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     updates.badge = payload.badge.trim() || null
   }
 
+  if (payload.challenge_start_date !== undefined) {
+    updates.challenge_start_date = payload.challenge_start_date ? new Date(payload.challenge_start_date).toISOString() : null
+  }
+
+  if (payload.challenge_end_date !== undefined) {
+    updates.challenge_end_date = payload.challenge_end_date ? new Date(payload.challenge_end_date).toISOString() : null
+  }
+
+  if (typeof payload.banner_image === 'string' || payload.banner_image === null) {
+    updates.banner_image = payload.banner_image ? payload.banner_image.trim() : null
+  }
+
   // Update the updated_at timestamp
   updates.updated_at = new Date().toISOString()
 

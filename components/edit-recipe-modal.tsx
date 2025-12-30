@@ -9,8 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
 import type { Recipe } from '@/actions/recipes'
+import { uploadBanner } from '@/app/actions/banners'
+import { useRef } from 'react'
 
 const DIFFICULTY_OPTIONS = ['Easy', 'Medium', 'Hard', 'Expert'] as const
+const MEAL_TYPE_OPTIONS = ['Breakfast', 'Lunch', 'Dinner'] as const
 
 type EditableRecipe = Pick<
   Recipe,
@@ -29,6 +32,7 @@ type EditableRecipe = Pick<
   | 'carbs_grams'
   | 'fat_grams'
   | 'fiber_grams'
+  | 'meal_type'
 >
 
 interface EditRecipeModalProps {
@@ -54,6 +58,7 @@ export function EditRecipeModal({ recipe, onClose, onRecipeUpdated }: EditRecipe
     carbs_grams: string
     fat_grams: string
     fiber_grams: string
+    meal_type: (typeof MEAL_TYPE_OPTIONS)[number] | ''
   }>({
     recipe_name: '',
     description: '',
@@ -70,9 +75,13 @@ export function EditRecipeModal({ recipe, onClose, onRecipeUpdated }: EditRecipe
     carbs_grams: '',
     fat_grams: '',
     fiber_grams: '',
+    meal_type: '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedBanner, setSelectedBanner] = useState<File | null>(null)
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null)
+  const bannerInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (recipe) {
@@ -94,7 +103,11 @@ export function EditRecipeModal({ recipe, onClose, onRecipeUpdated }: EditRecipe
         carbs_grams: recipe.carbs_grams?.toString() || '',
         fat_grams: recipe.fat_grams?.toString() || '',
         fiber_grams: recipe.fiber_grams?.toString() || '',
+        meal_type: (recipe as any).meal_type || '',
       })
+      setSelectedBanner(null)
+      const existingBanner = (recipe as any).banner_image
+      setBannerPreview(existingBanner || null)
       setError(null)
     }
   }, [recipe])
@@ -120,6 +133,20 @@ export function EditRecipeModal({ recipe, onClose, onRecipeUpdated }: EditRecipe
     setError(null)
 
     try {
+      // Upload banner image if selected
+      let bannerUrl = (recipe as any).banner_image || null
+      if (selectedBanner) {
+        const bannerResult = await uploadBanner(selectedBanner, recipe.recipe_id)
+        if (bannerResult.success && bannerResult.url) {
+          bannerUrl = bannerResult.url
+        } else {
+          console.warn('Failed to upload banner:', bannerResult.error)
+          setError(bannerResult.error || 'Failed to upload banner')
+          setIsSubmitting(false)
+          return
+        }
+      }
+
       const response = await fetch(`/api/recipes/${recipe.recipe_id}`, {
         method: 'PATCH',
         headers: {
@@ -141,6 +168,8 @@ export function EditRecipeModal({ recipe, onClose, onRecipeUpdated }: EditRecipe
           carbs_grams: formData.carbs_grams ? parseFloat(formData.carbs_grams) : null,
           fat_grams: formData.fat_grams ? parseFloat(formData.fat_grams) : null,
           fiber_grams: formData.fiber_grams ? parseFloat(formData.fiber_grams) : null,
+          meal_type: formData.meal_type || null,
+          banner_image: bannerUrl,
         }),
       })
 
@@ -265,15 +294,70 @@ export function EditRecipeModal({ recipe, onClose, onRecipeUpdated }: EditRecipe
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-class-name">Class Name *</Label>
+              <Input
+                id="edit-class-name"
+                placeholder="Breakfast Recipes"
+                value={formData.class_name}
+                onChange={(e) => setFormData({ ...formData, class_name: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-meal-type">Meal Type</Label>
+              <Select
+                value={formData.meal_type || undefined}
+                onValueChange={(value) => setFormData({ ...formData, meal_type: value as (typeof MEAL_TYPE_OPTIONS)[number] })}
+              >
+                <SelectTrigger id="edit-meal-type">
+                  <SelectValue placeholder="Select meal type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MEAL_TYPE_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="edit-class-name">Class Name *</Label>
-            <Input
-              id="edit-class-name"
-              placeholder="Breakfast Recipes"
-              value={formData.class_name}
-              onChange={(e) => setFormData({ ...formData, class_name: e.target.value })}
-              required
-            />
+            <Label htmlFor="edit-banner">Banner Image (JPEG, PNG, or WebP)</Label>
+            <div className="space-y-2">
+              <Input
+                id="edit-banner"
+                type="file"
+                accept=".jpeg,.jpg,.png,.webp,image/jpeg,image/png,image/webp"
+                ref={bannerInputRef}
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    setSelectedBanner(file)
+                    const reader = new FileReader()
+                    reader.onloadend = () => {
+                      setBannerPreview(reader.result as string)
+                    }
+                    reader.readAsDataURL(file)
+                  }
+                }}
+                disabled={isSubmitting}
+                className="cursor-pointer"
+              />
+              {bannerPreview && (
+                <div className="mt-2">
+                  <img
+                    src={bannerPreview}
+                    alt="Banner preview"
+                    className="max-w-full max-h-[200px] object-contain border rounded-md"
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
