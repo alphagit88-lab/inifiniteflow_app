@@ -9,8 +9,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { Recipe, getRecipes } from '@/actions/recipes'
 import { EditRecipeModal } from './edit-recipe-modal'
 import { AddRecipeModal } from './add-recipe-modal'
-import { ViewRecipeBannerDialog } from './view-recipe-banner-dialog'
-import { Plus, Image } from 'lucide-react'
+import { Plus } from 'lucide-react'
 
 interface RecipeDisplay {
   recipe_id: string
@@ -54,9 +53,6 @@ export function RecipesDataTable({ initialRecipes = [] }: { initialRecipes: Reci
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
-  const [viewingBannerRecipeId, setViewingBannerRecipeId] = useState<string | null>(null)
-  const [viewingBannerRecipeName, setViewingBannerRecipeName] = useState<string>('')
-  const [viewingBannerImageUrl, setViewingBannerImageUrl] = useState<string | null>(null)
 
   useEffect(() => {
     if (initialRecipes.length === 0) {
@@ -124,17 +120,6 @@ export function RecipesDataTable({ initialRecipes = [] }: { initialRecipes: Reci
     setEditingRecipe(recipe)
   }
 
-  const handleViewBanner = (recipe: Recipe) => {
-    setViewingBannerRecipeId(recipe.recipe_id)
-    setViewingBannerRecipeName(recipe.recipe_name)
-    setViewingBannerImageUrl((recipe as any).banner_image || null)
-  }
-
-  const closeViewBanner = () => {
-    setViewingBannerRecipeId(null)
-    setViewingBannerRecipeName('')
-    setViewingBannerImageUrl(null)
-  }
 
   const handleRecipeUpdated = (updatedRecipe: Recipe) => {
     setRecipes((prev) => prev.map((recipe) => (recipe.recipe_id === updatedRecipe.recipe_id ? updatedRecipe : recipe)))
@@ -231,7 +216,6 @@ export function RecipesDataTable({ initialRecipes = [] }: { initialRecipes: Reci
                   <TableHead>Premium</TableHead>
                   <TableHead>Published</TableHead>
                   <TableHead>Created</TableHead>
-                  <TableHead>Banner</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -284,18 +268,6 @@ export function RecipesDataTable({ initialRecipes = [] }: { initialRecipes: Reci
                         )}
                       </TableCell>
                       <TableCell className="text-sm text-gray-500">{formatDate(recipe.created_at)}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewBanner(recipe)}
-                          className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
-                          disabled={!(recipe as any).banner_image}
-                        >
-                          <Image className="h-4 w-4 mr-1" />
-                          View Banner
-                        </Button>
-                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
                           <Button variant="outline" size="sm" onClick={() => handleEditClick(recipe)}>
@@ -322,7 +294,7 @@ export function RecipesDataTable({ initialRecipes = [] }: { initialRecipes: Reci
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={13} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={12} className="text-center py-8 text-gray-500">
                       {searchTerm ? 'No matching recipes found' : 'No recipes found'}
                     </TableCell>
                   </TableRow>
@@ -342,15 +314,6 @@ export function RecipesDataTable({ initialRecipes = [] }: { initialRecipes: Reci
 
       {/* Edit Modal */}
       <EditRecipeModal recipe={editingRecipe} onClose={closeEditModal} onRecipeUpdated={handleRecipeUpdated} />
-
-      {/* View Banner Dialog */}
-      <ViewRecipeBannerDialog
-        recipeId={viewingBannerRecipeId}
-        recipeName={viewingBannerRecipeName}
-        bannerImageUrl={viewingBannerImageUrl}
-        open={viewingBannerRecipeId !== null}
-        onClose={closeViewBanner}
-      />
 
       {/* Pagination */}
       {totalPages > 1 && !isInitialLoading && (

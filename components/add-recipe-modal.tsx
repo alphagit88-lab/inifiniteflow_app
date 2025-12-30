@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
 import type { Recipe } from '@/actions/recipes'
-import { uploadBanner } from '@/app/actions/banners'
 import { useRef } from 'react'
 
 const DIFFICULTY_OPTIONS = ['Easy', 'Medium', 'Hard', 'Expert'] as const
@@ -59,9 +58,6 @@ export function AddRecipeModal({ open, onClose, onRecipeCreated }: AddRecipeModa
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [selectedBanner, setSelectedBanner] = useState<File | null>(null)
-  const [bannerPreview, setBannerPreview] = useState<string | null>(null)
-  const bannerInputRef = useRef<HTMLInputElement>(null)
 
   const resetForm = () => {
     setFormData({
@@ -82,8 +78,6 @@ export function AddRecipeModal({ open, onClose, onRecipeCreated }: AddRecipeModa
       fiber_grams: '',
       meal_type: '',
     })
-    setSelectedBanner(null)
-    setBannerPreview(null)
     setError(null)
   }
 
@@ -140,25 +134,6 @@ export function AddRecipeModal({ open, onClose, onRecipeCreated }: AddRecipeModa
 
       if (!response.ok) {
         throw new Error(payload?.error || 'Failed to create recipe')
-      }
-
-      // Upload banner image if selected
-      if (selectedBanner && payload.data?.recipe_id) {
-        const bannerResult = await uploadBanner(selectedBanner, payload.data.recipe_id)
-        if (bannerResult.success && bannerResult.url) {
-          // Update recipe with banner URL
-          await fetch(`/api/recipes/${payload.data.recipe_id}`, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              banner_image: bannerResult.url,
-            }),
-          })
-        } else {
-          console.warn('Failed to upload banner:', bannerResult.error)
-        }
       }
 
       onRecipeCreated(payload.data)
@@ -314,40 +289,6 @@ export function AddRecipeModal({ open, onClose, onRecipeCreated }: AddRecipeModa
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="add-banner">Banner Image (JPEG, PNG, or WebP)</Label>
-            <div className="space-y-2">
-              <Input
-                id="add-banner"
-                type="file"
-                accept=".jpeg,.jpg,.png,.webp,image/jpeg,image/png,image/webp"
-                ref={bannerInputRef}
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) {
-                    setSelectedBanner(file)
-                    const reader = new FileReader()
-                    reader.onloadend = () => {
-                      setBannerPreview(reader.result as string)
-                    }
-                    reader.readAsDataURL(file)
-                  }
-                }}
-                disabled={isSubmitting}
-                className="cursor-pointer"
-              />
-              {bannerPreview && (
-                <div className="mt-2">
-                  <img
-                    src={bannerPreview}
-                    alt="Banner preview"
-                    className="max-w-full max-h-[200px] object-contain border rounded-md"
-                  />
-                </div>
-              )}
             </div>
           </div>
 

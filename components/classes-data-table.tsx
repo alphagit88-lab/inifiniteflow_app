@@ -12,8 +12,7 @@ import { AddClassModal } from './add-class-modal'
 import { ViewClassVideosDialog } from './view-class-videos-dialog'
 import { ViewClassCommentsDialog } from './view-class-comments-dialog'
 import { ViewClassNotesDialog } from './view-class-notes-dialog'
-import { ViewClassBannerDialog } from './view-class-banner-dialog'
-import { Plus, Video, MessageSquare, FileText, Image } from 'lucide-react'
+import { Plus, Video, MessageSquare, FileText } from 'lucide-react'
 
 interface ClassDisplay {
   class_id: string
@@ -61,9 +60,6 @@ export function ClassesDataTable({ initialClasses = [] }: { initialClasses: Clas
   const [viewingCommentsClassName, setViewingCommentsClassName] = useState<string>('')
   const [viewingNotesClassId, setViewingNotesClassId] = useState<string | null>(null)
   const [viewingNotesClassName, setViewingNotesClassName] = useState<string>('')
-  const [viewingBannerClassId, setViewingBannerClassId] = useState<string | null>(null)
-  const [viewingBannerClassName, setViewingBannerClassName] = useState<string>('')
-  const [viewingBannerImageUrl, setViewingBannerImageUrl] = useState<string | null>(null)
 
   // Fallback Effect: Attempt to fetch data if the initial prop was empty.
   useEffect(() => {
@@ -175,17 +171,6 @@ export function ClassesDataTable({ initialClasses = [] }: { initialClasses: Clas
     setViewingNotesClassName('')
   }
 
-  const handleViewBanner = (cls: Class) => {
-    setViewingBannerClassId(cls.class_id)
-    setViewingBannerClassName(cls.class_name)
-    setViewingBannerImageUrl((cls as any).banner_image || null)
-  }
-
-  const closeViewBanner = () => {
-    setViewingBannerClassId(null)
-    setViewingBannerClassName('')
-    setViewingBannerImageUrl(null)
-  }
 
   const formatDuration = (minutes: number) => {
     if (minutes < 60) {
@@ -264,7 +249,6 @@ export function ClassesDataTable({ initialClasses = [] }: { initialClasses: Clas
                   <TableHead>Videos</TableHead>
                   <TableHead>Comments</TableHead>
                   <TableHead>Notes</TableHead>
-                  <TableHead>Banner</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -347,18 +331,6 @@ export function ClassesDataTable({ initialClasses = [] }: { initialClasses: Clas
                           View Notes
                         </Button>
                       </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewBanner(cls)}
-                          className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
-                          disabled={!(cls as any).banner_image}
-                        >
-                          <Image className="h-4 w-4 mr-1" />
-                          View Banner
-                        </Button>
-                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
                           <Button variant="outline" size="sm" onClick={() => handleEditClick(cls)}>
@@ -385,7 +357,7 @@ export function ClassesDataTable({ initialClasses = [] }: { initialClasses: Clas
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={15} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={14} className="text-center py-8 text-gray-500">
                       {searchTerm ? 'No matching classes found' : 'No classes found'}
                     </TableCell>
                   </TableRow>
@@ -428,15 +400,6 @@ export function ClassesDataTable({ initialClasses = [] }: { initialClasses: Clas
         className={viewingNotesClassName}
         open={viewingNotesClassId !== null}
         onClose={closeViewNotes}
-      />
-
-      {/* View Banner Dialog */}
-      <ViewClassBannerDialog
-        classId={viewingBannerClassId}
-        className={viewingBannerClassName}
-        bannerImageUrl={viewingBannerImageUrl}
-        open={viewingBannerClassId !== null}
-        onClose={closeViewBanner}
       />
 
       {/* Pagination */}
