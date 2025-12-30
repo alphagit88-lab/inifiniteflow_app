@@ -20,12 +20,13 @@ export async function GET(_: Request, { params }: RouteContext) {
   }
 
   try {
-    // Fetch comments with user profile information (including hidden ones for admin)
+    // Fetch comments with user profile and video information (including hidden ones for admin)
     const { data, error } = await supabaseAdmin
-      .from('class_comments')
+      .from('class_video_comments')
       .select(`
         comment_id,
         class_id,
+        video_id,
         user_id,
         comment_text,
         created_at,
@@ -35,6 +36,13 @@ export async function GET(_: Request, { params }: RouteContext) {
           user_id,
           nickname,
           email
+        ),
+        videos:video_id (
+          video_id,
+          description,
+          meta_title,
+          thumbnail_url,
+          mux_playback_id
         )
       `)
       .eq('class_id', classId)
@@ -45,10 +53,11 @@ export async function GET(_: Request, { params }: RouteContext) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Transform the data to flatten the profile information
+    // Transform the data to flatten the profile and video information
     const comments = (data || []).map((comment: any) => ({
       comment_id: comment.comment_id,
       class_id: comment.class_id,
+      video_id: comment.video_id,
       user_id: comment.user_id,
       comment_text: comment.comment_text,
       created_at: comment.created_at,
@@ -58,6 +67,13 @@ export async function GET(_: Request, { params }: RouteContext) {
         user_id: comment.profiles.user_id,
         nickname: comment.profiles.nickname,
         email: comment.profiles.email,
+      } : null,
+      video: comment.videos ? {
+        video_id: comment.videos.video_id,
+        description: comment.videos.description,
+        meta_title: comment.videos.meta_title,
+        thumbnail_url: comment.videos.thumbnail_url,
+        mux_playback_id: comment.videos.mux_playback_id,
       } : null,
     }))
 

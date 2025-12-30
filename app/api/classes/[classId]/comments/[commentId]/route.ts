@@ -22,7 +22,7 @@ export async function DELETE(_: Request, { params }: RouteContext) {
 
   try {
     const { error } = await supabaseAdmin
-      .from('class_comments')
+      .from('class_video_comments')
       .delete()
       .eq('comment_id', commentId)
 
@@ -67,12 +67,13 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
   try {
     const { data, error } = await supabaseAdmin
-      .from('class_comments')
+      .from('class_video_comments')
       .update(updates)
       .eq('comment_id', commentId)
       .select(`
         comment_id,
         class_id,
+        video_id,
         user_id,
         comment_text,
         created_at,
@@ -82,6 +83,13 @@ export async function PATCH(request: Request, { params }: RouteContext) {
           user_id,
           nickname,
           email
+        ),
+        videos:video_id (
+          video_id,
+          description,
+          meta_title,
+          thumbnail_url,
+          mux_playback_id
         )
       `)
       .single()
@@ -91,10 +99,11 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Transform the data to flatten the profile information
+    // Transform the data to flatten the profile and video information
     const comment = {
       comment_id: data.comment_id,
       class_id: data.class_id,
+      video_id: data.video_id,
       user_id: data.user_id,
       comment_text: data.comment_text,
       created_at: data.created_at,
@@ -104,6 +113,13 @@ export async function PATCH(request: Request, { params }: RouteContext) {
         user_id: (data as any).profiles.user_id,
         nickname: (data as any).profiles.nickname,
         email: (data as any).profiles.email,
+      } : null,
+      video: (data as any).videos ? {
+        video_id: (data as any).videos.video_id,
+        description: (data as any).videos.description,
+        meta_title: (data as any).videos.meta_title,
+        thumbnail_url: (data as any).videos.thumbnail_url,
+        mux_playback_id: (data as any).videos.mux_playback_id,
       } : null,
     }
 

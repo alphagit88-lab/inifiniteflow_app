@@ -20,12 +20,13 @@ export async function GET(_: Request, { params }: RouteContext) {
   }
 
   try {
-    // Fetch notes with user profile information
+    // Fetch notes with user profile and video information
     const { data, error } = await supabaseAdmin
-      .from('class_notes')
+      .from('class_video_notes')
       .select(`
         note_id,
         class_id,
+        video_id,
         user_id,
         note_content,
         created_at,
@@ -35,6 +36,13 @@ export async function GET(_: Request, { params }: RouteContext) {
           user_id,
           nickname,
           email
+        ),
+        videos:video_id (
+          video_id,
+          description,
+          meta_title,
+          thumbnail_url,
+          mux_playback_id
         )
       `)
       .eq('class_id', classId)
@@ -45,10 +53,11 @@ export async function GET(_: Request, { params }: RouteContext) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Transform the data to flatten the profile information
+    // Transform the data to flatten the profile and video information
     const notes = (data || []).map((note: any) => ({
       note_id: note.note_id,
       class_id: note.class_id,
+      video_id: note.video_id,
       user_id: note.user_id,
       note_content: note.note_content,
       created_at: note.created_at,
@@ -58,6 +67,13 @@ export async function GET(_: Request, { params }: RouteContext) {
         user_id: note.profiles.user_id,
         nickname: note.profiles.nickname,
         email: note.profiles.email,
+      } : null,
+      video: note.videos ? {
+        video_id: note.videos.video_id,
+        description: note.videos.description,
+        meta_title: note.videos.meta_title,
+        thumbnail_url: note.videos.thumbnail_url,
+        mux_playback_id: note.videos.mux_playback_id,
       } : null,
     }))
 
