@@ -55,6 +55,14 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
   const updates: Record<string, any> = {}
 
+  if (typeof payload.first_name === 'string' && payload.first_name.trim()) {
+    updates.first_name = payload.first_name.trim()
+  }
+
+  if (typeof payload.last_name === 'string' && payload.last_name.trim()) {
+    updates.last_name = payload.last_name.trim()
+  }
+
   if (typeof payload.bio === 'string') {
     updates.bio = payload.bio.trim()
   }

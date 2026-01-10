@@ -16,6 +16,8 @@ const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ
  */
 export interface Instructor {
   instructor_id: string
+  first_name: string
+  last_name: string
   bio: string
   is_featured: boolean
   total_students: number

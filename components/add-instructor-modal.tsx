@@ -20,6 +20,8 @@ interface AddInstructorModalProps {
 export function AddInstructorModal({ open, onClose, onInstructorCreated }: AddInstructorModalProps) {
   const [formData, setFormData] = useState({
     instructor_id: '',
+    first_name: '',
+    last_name: '',
     bio: '',
     is_featured: false,
     years_experience: '',
@@ -62,6 +64,8 @@ export function AddInstructorModal({ open, onClose, onInstructorCreated }: AddIn
       // Reset form when closing
       setFormData({
         instructor_id: '',
+        first_name: '',
+        last_name: '',
         bio: '',
         is_featured: false,
         years_experience: '',
@@ -118,6 +122,11 @@ export function AddInstructorModal({ open, onClose, onInstructorCreated }: AddIn
       return
     }
 
+    if (!formData.first_name.trim() || !formData.last_name.trim()) {
+      setError('First name and last name are required')
+      return
+    }
+
     setIsSubmitting(true)
     setError(null)
 
@@ -129,6 +138,8 @@ export function AddInstructorModal({ open, onClose, onInstructorCreated }: AddIn
         },
         body: JSON.stringify({
           instructor_id: formData.instructor_id,
+          first_name: formData.first_name.trim(),
+          last_name: formData.last_name.trim(),
           bio: formData.bio.trim(),
           is_featured: formData.is_featured,
           years_experience: formData.years_experience ? parseInt(formData.years_experience) : null,
@@ -181,6 +192,32 @@ export function AddInstructorModal({ open, onClose, onInstructorCreated }: AddIn
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="first-name">First Name *</Label>
+              <Input
+                id="first-name"
+                placeholder="Enter first name..."
+                value={formData.first_name}
+                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                disabled={isSubmitting}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="last-name">Last Name *</Label>
+              <Input
+                id="last-name"
+                placeholder="Enter last name..."
+                value={formData.last_name}
+                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                disabled={isSubmitting}
+                required
+              />
+            </div>
           </div>
 
           <div className="space-y-2">

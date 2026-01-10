@@ -13,6 +13,8 @@ import { Plus } from 'lucide-react'
 
 interface InstructorDisplay {
   instructor_id: string
+  first_name: string
+  last_name: string
   bio: string
   is_featured: boolean
   total_students: number
@@ -29,6 +31,8 @@ const ITEMS_PER_PAGE = 5
 // Utility to normalize database instructor to display format
 const normalizeInstructor = (instructor: Instructor): InstructorDisplay => ({
   instructor_id: instructor.instructor_id,
+  first_name: instructor.first_name || '',
+  last_name: instructor.last_name || '',
   bio: instructor.bio,
   is_featured: instructor.is_featured,
   total_students: instructor.total_students,
@@ -76,13 +80,20 @@ export function InstructorsDataTable({ initialInstructors = [] }: { initialInstr
 
   const filteredInstructors = useMemo(() => {
     return instructors.filter(
-      (instructor) =>
-        instructor.instructor_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        instructor.bio.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (instructor.specialization &&
-          instructor.specialization.some((spec) => spec.toLowerCase().includes(searchTerm.toLowerCase()))) ||
-        (instructor.certifications &&
-          instructor.certifications.some((cert) => cert.toLowerCase().includes(searchTerm.toLowerCase())))
+      (instructor) => {
+        const fullName = `${instructor.first_name} ${instructor.last_name}`.toLowerCase()
+        return (
+          instructor.instructor_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          fullName.includes(searchTerm.toLowerCase()) ||
+          instructor.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          instructor.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          instructor.bio.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (instructor.specialization &&
+            instructor.specialization.some((spec) => spec.toLowerCase().includes(searchTerm.toLowerCase()))) ||
+          (instructor.certifications &&
+            instructor.certifications.some((cert) => cert.toLowerCase().includes(searchTerm.toLowerCase())))
+        )
+      }
     )
   }, [instructors, searchTerm])
 
@@ -98,10 +109,6 @@ export function InstructorsDataTable({ initialInstructors = [] }: { initialInstr
       month: 'short',
       day: 'numeric',
     })
-  }
-
-  const formatInstructorId = (id: string) => {
-    return id.substring(0, 8) + '...'
   }
 
   const formatBio = (bio: string) => {
@@ -144,6 +151,8 @@ export function InstructorsDataTable({ initialInstructors = [] }: { initialInstr
     // Convert InstructorDisplay to Instructor format
     const instructorData: Instructor = {
       instructor_id: instructor.instructor_id,
+      first_name: instructor.first_name,
+      last_name: instructor.last_name,
       bio: instructor.bio,
       is_featured: instructor.is_featured,
       total_students: instructor.total_students,
@@ -187,7 +196,7 @@ export function InstructorsDataTable({ initialInstructors = [] }: { initialInstr
       <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
         <div className="flex-1">
           <Input
-            placeholder="Search by instructor ID, bio, specialization, or certifications..."
+            placeholder="Search by name, instructor ID, bio, specialization, or certifications..."
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value)
@@ -220,7 +229,7 @@ export function InstructorsDataTable({ initialInstructors = [] }: { initialInstr
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50">
-                  <TableHead>Instructor ID</TableHead>
+                  <TableHead>Instructor Name</TableHead>
                   <TableHead>Bio</TableHead>
                   <TableHead>Specialization</TableHead>
                   <TableHead>Years Exp.</TableHead>
@@ -236,7 +245,9 @@ export function InstructorsDataTable({ initialInstructors = [] }: { initialInstr
                 {paginatedInstructors.length > 0 ? (
                   paginatedInstructors.map((instructor) => (
                     <TableRow key={instructor.instructor_id} className="hover:bg-gray-50 transition-colors">
-                      <TableCell className="font-mono text-xs">{formatInstructorId(instructor.instructor_id)}</TableCell>
+                      <TableCell className="font-medium">
+                        {instructor.first_name} {instructor.last_name}
+                      </TableCell>
                       <TableCell className="max-w-xs">
                         <div className="text-sm text-gray-700" title={instructor.bio}>
                           {formatBio(instructor.bio)}
