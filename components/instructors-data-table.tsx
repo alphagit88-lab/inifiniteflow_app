@@ -9,6 +9,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { Instructor, getInstructors } from '@/actions/instructors'
 import { AddInstructorModal } from './add-instructor-modal'
 import { EditInstructorModal } from './edit-instructor-modal'
+import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card'
 import { Plus } from 'lucide-react'
 
 interface InstructorDisplay {
@@ -112,8 +113,8 @@ export function InstructorsDataTable({ initialInstructors = [] }: { initialInstr
   }
 
   const formatBio = (bio: string) => {
-    if (bio.length <= 60) return bio
-    return bio.substring(0, 60) + '...'
+    if (bio.length <= 20) return bio
+    return bio.substring(0, 20) + '...'
   }
 
   const getRatingColor = (rating: number | null | undefined) => {
@@ -249,9 +250,24 @@ export function InstructorsDataTable({ initialInstructors = [] }: { initialInstr
                         {instructor.first_name} {instructor.last_name}
                       </TableCell>
                       <TableCell className="max-w-xs">
-                        <div className="text-sm text-gray-700" title={instructor.bio}>
-                          {formatBio(instructor.bio)}
-                        </div>
+                        {instructor.bio.length > 20 ? (
+                          <HoverCard>
+                            <HoverCardTrigger asChild>
+                              <div className="text-sm text-gray-700 cursor-pointer">
+                                {formatBio(instructor.bio)}
+                              </div>
+                            </HoverCardTrigger>
+                            <HoverCardContent className="w-80">
+                              <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                                {instructor.bio}
+                              </div>
+                            </HoverCardContent>
+                          </HoverCard>
+                        ) : (
+                          <div className="text-sm text-gray-700">
+                            {instructor.bio}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         {instructor.specialization && instructor.specialization.length > 0 ? (
