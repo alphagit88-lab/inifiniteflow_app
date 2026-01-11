@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Users, BookOpen, UtensilsCrossed, Activity, GraduationCap, Video, Settings, Image } from 'lucide-react'
+import { LayoutDashboard, Users, BookOpen, UtensilsCrossed, Activity, GraduationCap, Video, Settings, Image, HelpCircle } from 'lucide-react'
 
 export function AdminSidebar() {
   const pathname = usePathname()
@@ -15,6 +15,7 @@ export function AdminSidebar() {
     { href: '/recipes', label: 'Recipe Management', icon: UtensilsCrossed },
     { href: '/workout', label: 'Workout Management', icon: Activity },
     { href: '/dashboard/videos', label: 'Video Management', icon: Video },
+    { href: '/faq', label: 'FAQ Management', icon: HelpCircle },
     { href: '/banners', label: 'Banner Settings', icon: Image },
     { href: '/dashboard/videos/settings', label: 'Settings', icon: Settings },
   ]
@@ -32,7 +33,8 @@ export function AdminSidebar() {
           const Icon = item.icon
           const isActive = pathname === item.href || 
             (item.href === '/dashboard/videos/settings' && pathname?.startsWith('/dashboard/videos/settings')) ||
-            (item.href === '/banners' && pathname?.startsWith('/banners'))
+            (item.href === '/banners' && pathname?.startsWith('/banners')) ||
+            (item.href === '/faq' && pathname?.startsWith('/faq'))
 
           return (
             <Link

@@ -18,9 +18,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Instructor ID and bio are required' }, { status: 400 })
   }
 
+  if (!payload.first_name || !payload.last_name) {
+    return NextResponse.json({ error: 'First name and last name are required' }, { status: 400 })
+  }
+
   // Build insert object
   const insertData: Record<string, any> = {
     instructor_id: payload.instructor_id.trim(),
+    first_name: payload.first_name.trim(),
+    last_name: payload.last_name.trim(),
     bio: payload.bio.trim(),
     is_featured: payload.is_featured !== undefined ? payload.is_featured : false,
     total_students: payload.total_students || 0,
